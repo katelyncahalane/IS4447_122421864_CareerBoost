@@ -13,6 +13,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { Link } from 'expo-router';
 
 export default function LoginScreen() {
   const colorScheme = useColorScheme() ?? 'light';
@@ -88,6 +89,14 @@ export default function LoginScreen() {
             Sign in
           </ThemedText>
         </Pressable>
+
+        <Link href="/register" asChild>
+          <Pressable style={({ pressed }) => [styles.linkButton, { opacity: pressed ? 0.7 : 1 }]}>
+            <ThemedText style={[styles.linkText, { color: palette.tint }]}>
+              Create an account
+            </ThemedText>
+          </Pressable>
+        </Link>
       </View>
     </ThemedView>
   );
@@ -111,6 +120,7 @@ const styles = StyleSheet.create({
   },
   actions: {
     marginTop: 16,
+    gap: 12,
   },
   errorText: {
     color: '#c00',
@@ -124,6 +134,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   buttonLabel: {
+    fontWeight: '600',
+    fontSize: 16,
+  },
+  linkButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    alignSelf: 'flex-start',
+  },
+  linkText: {
     fontWeight: '600',
     fontSize: 16,
   },
