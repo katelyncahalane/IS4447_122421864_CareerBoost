@@ -14,22 +14,32 @@ import { ThemedView } from '@/components/themed-view';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
-export default function LoginScreen() {
+export default function RegisterScreen() {
   const colorScheme = useColorScheme() ?? 'light';
   const palette = Colors[colorScheme];
 
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   const canSubmit = useMemo(() => {
-    return username.trim().length > 0 && password.length > 0;
-  }, [password.length, username]);
+    return (
+      username.trim().length > 0 &&
+      password.length >= 6 &&
+      confirmPassword.length >= 6 &&
+      password === confirmPassword
+    );
+  }, [confirmPassword, password, username]);
 
   return (
     <ThemedView style={styles.container}>
       <ThemedText type="title" style={styles.title}>
-        Login
+        Register
+      </ThemedText>
+
+      <ThemedText style={styles.muted}>
+        Create an account for this device (local-only).
       </ThemedText>
 
       <ThemedText type="defaultSemiBold">Username</ThemedText>
@@ -58,9 +68,25 @@ export default function LoginScreen() {
         }}
         secureTextEntry
         accessibilityLabel="Password"
-        textContentType="password"
-        autoComplete="password"
-        placeholder="password"
+        textContentType="newPassword"
+        autoComplete="new-password"
+        placeholder="min 6 characters"
+        placeholderTextColor={palette.icon}
+        style={[styles.input, { color: palette.text, borderColor: palette.icon }]}
+      />
+
+      <ThemedText type="defaultSemiBold">Confirm password</ThemedText>
+      <TextInput
+        value={confirmPassword}
+        onChangeText={(v) => {
+          setConfirmPassword(v);
+          if (error) setError(null);
+        }}
+        secureTextEntry
+        accessibilityLabel="Confirm password"
+        textContentType="newPassword"
+        autoComplete="new-password"
+        placeholder="repeat password"
         placeholderTextColor={palette.icon}
         style={[styles.input, { color: palette.text, borderColor: palette.icon }]}
       />
@@ -70,9 +96,17 @@ export default function LoginScreen() {
       <View style={styles.actions}>
         <Pressable
           onPress={() => {
-            // Next step: add real auth + navigation.
-            if (!canSubmit) {
-              setError('Enter your username and password.');
+            // Next step: add real register logic + navigation.
+            if (!username.trim()) {
+              setError('Enter a username.');
+              return;
+            }
+            if (password.length < 6) {
+              setError('Password must be at least 6 characters.');
+              return;
+            }
+            if (password !== confirmPassword) {
+              setError('Passwords do not match.');
               return;
             }
           }}
@@ -85,7 +119,7 @@ export default function LoginScreen() {
             },
           ]}>
           <ThemedText style={[styles.buttonLabel, { color: colorScheme === 'dark' ? '#111' : '#fff' }]}>
-            Sign in
+            Create account
           </ThemedText>
         </Pressable>
       </View>
@@ -100,6 +134,10 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   title: {
+    marginBottom: 4,
+  },
+  muted: {
+    opacity: 0.8,
     marginBottom: 8,
   },
   input: {
