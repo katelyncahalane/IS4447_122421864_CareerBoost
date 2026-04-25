@@ -1,3 +1,9 @@
+/**
+ * Drizzle schema for the Job Application Tracker.
+ *
+ * References:
+ * - Drizzle ORM (SQLite core): https://orm.drizzle.team/docs/sql-schema-declaration
+ */
 import { integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 
 export const categories = sqliteTable('categories', {

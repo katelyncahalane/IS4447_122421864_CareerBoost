@@ -1,7 +1,18 @@
+/**
+ * Startup gate for the app:
+ * - Seeds local SQLite DB once (for demo data).
+ * - Routes to `/login` if no session, otherwise routes to `/(tabs)`.
+ *
+ * References:
+ * - Expo Router docs (navigation + routing): https://docs.expo.dev/router/introduction/
+ * - expo-sqlite docs: https://docs.expo.dev/versions/latest/sdk/sqlite/
+ * - Drizzle ORM (SQLite): https://orm.drizzle.team/
+ */
 import { ActivityIndicator, StyleSheet } from 'react-native';
 
 import { ThemedView } from '@/components/themed-view';
 import { Colors } from '@/constants/theme';
+import { seedDb } from '@/db/seed';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { getSession } from '@/lib/session';
 import { useRouter } from 'expo-router';
@@ -14,10 +25,13 @@ export default function Index() {
 
   useEffect(() => {
     let mounted = true;
-    void getSession().then((session) => {
+    void (async () => {
+      // Ensure demo data exists before any list screens load.
+      await seedDb();
+      const session = await getSession();
       if (!mounted) return;
       router.replace(session ? '/(tabs)' : '/login');
-    });
+    })();
     return () => {
       mounted = false;
     };

@@ -1,3 +1,12 @@
+/**
+ * Minimal local session storage (no backend).
+ *
+ * This is intentionally simple for coursework; later you can replace this with
+ * a real `users` table in SQLite via Drizzle (still local-only).
+ *
+ * References:
+ * - AsyncStorage docs: https://react-native-async-storage.github.io/async-storage/
+ */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const SESSION_KEY = '@is4447/session_v1';
