@@ -14,10 +14,13 @@ import { ThemedView } from '@/components/themed-view';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Link } from 'expo-router';
+import { useRouter } from 'expo-router';
+import { setSession } from '@/lib/session';
 
 export default function LoginScreen() {
   const colorScheme = useColorScheme() ?? 'light';
   const palette = Colors[colorScheme];
+  const router = useRouter();
 
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -76,6 +79,9 @@ export default function LoginScreen() {
               setError('Enter your username and password.');
               return;
             }
+            void setSession({ username: username.trim() }).then(() => {
+              router.replace('/(tabs)');
+            });
           }}
           disabled={!canSubmit}
           style={({ pressed }) => [
