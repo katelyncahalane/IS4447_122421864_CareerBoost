@@ -1,98 +1,223 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import { useCallback, useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  TextInput,
+  View,
+} from 'react-native';
 
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+import { Colors } from '@/constants/theme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import {
+  deleteJobApplication,
+  loadJobApplication,
+  type JobApplication,
+  saveJobApplication,
+} from '@/lib/job-application-storage';
 
-export default function HomeScreen() {
+const emptyForm = (): JobApplication => ({
+  company: '',
+  role: '',
+  status: '',
+  notes: '',
+});
+
+export default function JobApplicationScreen() {
+  const colorScheme = useColorScheme() ?? 'light';
+  const palette = Colors[colorScheme];
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState<JobApplication>(emptyForm());
+  const [hasRecord, setHasRecord] = useState(false);
+
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    try {
+      const app = await loadJobApplication();
+      if (app) {
+        setForm(app);
+        setHasRecord(true);
+      } else {
+        setForm(emptyForm());
+        setHasRecord(false);
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void refresh();
+  }, [refresh]);
+
+  const onSave = async () => {
+    if (!form.company.trim() || !form.role.trim()) {
+      Alert.alert('Missing fields', 'Please enter at least company and role.');
+      return;
+    }
+    setSaving(true);
+    try {
+      await saveJobApplication({
+        company: form.company.trim(),
+        role: form.role.trim(),
+        status: form.status.trim(),
+        notes: form.notes.trim(),
+      });
+      setHasRecord(true);
+      Alert.alert('Saved', 'Your job application was updated.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const onDelete = () => {
+    Alert.alert('Delete application?', 'This clears your saved application.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          await deleteJobApplication();
+          setForm(emptyForm());
+          setHasRecord(false);
+        },
+      },
+    ]);
+  };
+
+  if (loading) {
+    return (
+      <ThemedView style={styles.centered}>
+        <ActivityIndicator size="large" color={palette.tint} />
+        <ThemedText style={styles.muted}>Loading…</ThemedText>
+      </ThemedView>
+    );
+  }
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+    <KeyboardAvoidingView
+      style={styles.flex}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}>
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag">
+        <ThemedView style={styles.body}>
+          {!hasRecord ? (
+            <ThemedText style={styles.muted}>
+              No application saved. Enter details below and tap Save to add one.
+            </ThemedText>
+          ) : null}
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+          <ThemedText type="defaultSemiBold">Company</ThemedText>
+          <TextInput
+            value={form.company}
+            onChangeText={(company) => setForm((f) => ({ ...f, company }))}
+            placeholder="Company name"
+            placeholderTextColor={palette.icon}
+            style={[styles.input, { color: palette.text, borderColor: palette.icon }]}
+          />
+
+          <ThemedText type="defaultSemiBold">Role</ThemedText>
+          <TextInput
+            value={form.role}
+            onChangeText={(role) => setForm((f) => ({ ...f, role }))}
+            placeholder="Job title"
+            placeholderTextColor={palette.icon}
+            style={[styles.input, { color: palette.text, borderColor: palette.icon }]}
+          />
+
+          <ThemedText type="defaultSemiBold">Status</ThemedText>
+          <TextInput
+            value={form.status}
+            onChangeText={(status) => setForm((f) => ({ ...f, status }))}
+            placeholder="e.g. Applied, Interview"
+            placeholderTextColor={palette.icon}
+            style={[styles.input, { color: palette.text, borderColor: palette.icon }]}
+          />
+
+          <ThemedText type="defaultSemiBold">Notes</ThemedText>
+          <TextInput
+            value={form.notes}
+            onChangeText={(notes) => setForm((f) => ({ ...f, notes }))}
+            placeholder="Optional notes"
+            placeholderTextColor={palette.icon}
+            multiline
+            style={[
+              styles.input,
+              styles.notes,
+              { color: palette.text, borderColor: palette.icon },
+            ]}
+          />
+
+          <View style={styles.actions}>
+            <Pressable
+              onPress={() => void onSave()}
+              disabled={saving}
+              style={({ pressed }) => [
+                styles.button,
+                { backgroundColor: palette.tint, opacity: pressed || saving ? 0.85 : 1 },
+              ]}>
+              {saving ? (
+                <ActivityIndicator color={colorScheme === 'dark' ? '#111' : '#fff'} />
+              ) : (
+                <ThemedText
+                  style={[styles.buttonLabel, { color: colorScheme === 'dark' ? '#111' : '#fff' }]}>
+                  Save
+                </ThemedText>
+              )}
+            </Pressable>
+
+            {hasRecord ? (
+              <Pressable
+                onPress={onDelete}
+                style={({ pressed }) => [
+                  styles.button,
+                  styles.deleteButton,
+                  { borderColor: '#c00', opacity: pressed ? 0.85 : 1 },
+                ]}>
+                <ThemedText style={styles.deleteLabel}>Delete</ThemedText>
+              </Pressable>
+            ) : null}
+          </View>
+        </ThemedView>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
+  flex: { flex: 1 },
+  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
+  scroll: { flexGrow: 1 },
+  body: { padding: 16, gap: 8 },
+  muted: { opacity: 0.8, marginBottom: 8 },
+  input: {
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 16,
+  },
+  notes: { minHeight: 100, textAlignVertical: 'top' },
+  actions: { flexDirection: 'row', gap: 12, marginTop: 16, flexWrap: 'wrap' },
+  button: {
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    minWidth: 120,
     alignItems: 'center',
-    gap: 8,
+    justifyContent: 'center',
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
-  },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
-  },
+  buttonLabel: { fontWeight: '600', fontSize: 16 },
+  deleteButton: { backgroundColor: 'transparent', borderWidth: 1 },
+  deleteLabel: { color: '#c00', fontWeight: '600', fontSize: 16 },
 });
