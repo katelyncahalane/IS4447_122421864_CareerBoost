@@ -21,6 +21,8 @@ import {
   type JobApplication,
   saveJobApplication,
 } from '@/lib/job-application-storage';
+import { clearSession } from '@/lib/session';
+import { useRouter } from 'expo-router';
 
 const emptyForm = (): JobApplication => ({
   company: '',
@@ -32,6 +34,7 @@ const emptyForm = (): JobApplication => ({
 export default function JobApplicationScreen() {
   const colorScheme = useColorScheme() ?? 'light';
   const palette = Colors[colorScheme];
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<JobApplication>(emptyForm());
@@ -92,6 +95,20 @@ export default function JobApplicationScreen() {
     ]);
   };
 
+  const onLogout = () => {
+    Alert.alert('Log out?', 'Are you sure you want to log out?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Yes, log out',
+        style: 'destructive',
+        onPress: async () => {
+          await clearSession();
+          router.replace('/login');
+        },
+      },
+    ]);
+  };
+
   if (loading) {
     return (
       <ThemedView style={styles.centered}>
@@ -111,6 +128,17 @@ export default function JobApplicationScreen() {
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag">
         <ThemedView style={styles.body}>
+          <View style={styles.topRow}>
+            <ThemedText type="title">Job application</ThemedText>
+            <Pressable
+              onPress={onLogout}
+              accessibilityRole="button"
+              accessibilityLabel="Log out"
+              style={({ pressed }) => [styles.logoutButton, { opacity: pressed ? 0.7 : 1 }]}>
+              <ThemedText style={styles.logoutText}>Log out</ThemedText>
+            </Pressable>
+          </View>
+
           {!hasRecord ? (
             <ThemedText style={styles.muted}>
               No application saved. Enter details below and tap Save to add one.
@@ -199,6 +227,21 @@ const styles = StyleSheet.create({
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
   scroll: { flexGrow: 1 },
   body: { padding: 16, gap: 8 },
+  topRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 4,
+  },
+  logoutButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#c00',
+  },
+  logoutText: { color: '#c00', fontWeight: '600' },
   muted: { opacity: 0.8, marginBottom: 8 },
   input: {
     borderWidth: 1,
