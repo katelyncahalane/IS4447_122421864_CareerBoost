@@ -39,17 +39,34 @@ const MOCK_ROWS = [
   },
 ];
 
-jest.mock('@/db/client', () => ({
-  db: {
-    select: () => ({
-      from: () => ({
-        innerJoin: () => ({
-          orderBy: () => Promise.resolve(MOCK_ROWS),
-        }),
+jest.mock('@/db/client', () => {
+  const schema = jest.requireActual('@/db/schema') as typeof import('@/db/schema');
+  const { applications, categories } = schema;
+
+  return {
+    db: {
+      select: () => ({
+        from: (table: unknown) => {
+          if (table === categories) {
+            return {
+              orderBy: () => Promise.resolve([{ id: 1, name: 'Software Engineering' }]),
+            };
+          }
+          if (table === applications) {
+            const joinChain = {
+              where: () => ({
+                orderBy: () => Promise.resolve(MOCK_ROWS),
+              }),
+              orderBy: () => Promise.resolve(MOCK_ROWS),
+            };
+            return { innerJoin: () => joinChain };
+          }
+          throw new Error(`Unexpected from() table in mock: ${String(table)}`);
+        },
       }),
-    }),
-  },
-}));
+    },
+  };
+});
 
 // imports – screen after mocks so it picks up the fake db
 import React from 'react';

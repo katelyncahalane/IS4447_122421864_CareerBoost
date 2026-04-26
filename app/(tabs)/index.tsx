@@ -1,13 +1,15 @@
 // applications tab – list job rows from sqlite (read in crud)
 
 // imports
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   FlatList,
   Pressable,
+  ScrollView,
   StyleSheet,
+  TextInput,
   View,
 } from 'react-native';
 
@@ -17,8 +19,9 @@ import { Colors } from '@/constants/theme';
 import { db } from '@/db/client';
 import { applications, categories } from '@/db/schema';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { applicationsListWhere } from '@/lib/application-list-query';
 import { clearSession } from '@/lib/session';
-import { eq, desc } from 'drizzle-orm';
+import { asc, desc, eq } from 'drizzle-orm';
 import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 
@@ -33,19 +36,36 @@ type ApplicationRow = {
   categoryName: string;
 };
 
+type CategoryChip = { id: number; name: string };
+
 // screen
 export default function JobApplicationScreen() {
   const colorScheme = useColorScheme() ?? 'light';
   const palette = Colors[colorScheme];
   const router = useRouter();
-  const [loading, setLoading] = useState(true);
+  const listHasLoadedRef = useRef(false);
+  const [showInitialLoader, setShowInitialLoader] = useState(true);
+  const [listRefreshing, setListRefreshing] = useState(false);
   const [rows, setRows] = useState<ApplicationRow[]>([]);
+  const [categoryChips, setCategoryChips] = useState<CategoryChip[]>([]);
+  // rubric: filter list by free text and by category (both query sqlite, not only client-side)
+  const [searchText, setSearchText] = useState('');
+  const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
 
-  // data – pull applications with category name, newest date first
+  // data – category names for chips; applications joined with optional WHERE
   const refresh = useCallback(async () => {
-    setLoading(true);
+    if (listHasLoadedRef.current) {
+      setListRefreshing(true);
+    }
     try {
-      const data = await db
+      const chipRows = await db
+        .select({ id: categories.id, name: categories.name })
+        .from(categories)
+        .orderBy(asc(categories.name));
+      setCategoryChips(chipRows);
+
+      const whereClause = applicationsListWhere(searchText, selectedCategoryId);
+      const baseQuery = db
         .select({
           id: applications.id,
           company: applications.company,
@@ -56,14 +76,19 @@ export default function JobApplicationScreen() {
           categoryName: categories.name,
         })
         .from(applications)
-        .innerJoin(categories, eq(applications.categoryId, categories.id))
-        .orderBy(desc(applications.appliedDate));
+        .innerJoin(categories, eq(applications.categoryId, categories.id));
+
+      const data = await (whereClause ? baseQuery.where(whereClause) : baseQuery).orderBy(
+        desc(applications.appliedDate),
+      );
 
       setRows(data);
     } finally {
-      setLoading(false);
+      listHasLoadedRef.current = true;
+      setShowInitialLoader(false);
+      setListRefreshing(false);
     }
-  }, []);
+  }, [searchText, selectedCategoryId]);
 
   // effect – first load
   useEffect(() => {
@@ -96,8 +121,8 @@ export default function JobApplicationScreen() {
     ]);
   };
 
-  // render – loading
-  if (loading) {
+  // render – full-screen spinner only before the first successful fetch (filters use pull-style refresh)
+  if (showInitialLoader) {
     return (
       <ThemedView style={styles.centered}>
         <ActivityIndicator size="large" color={palette.tint} />
@@ -133,9 +158,80 @@ export default function JobApplicationScreen() {
           </View>
         </View>
 
+        <ThemedText type="defaultSemiBold" style={styles.filterLabel}>
+          Search (company or role)
+        </ThemedText>
+        <TextInput
+          value={searchText}
+          onChangeText={setSearchText}
+          placeholder="e.g. Riverbank or engineer"
+          placeholderTextColor={palette.icon}
+          accessibilityLabel="Search applications by company or role"
+          autoCapitalize="none"
+          autoCorrect={false}
+          style={[styles.searchInput, { color: palette.text, borderColor: palette.icon }]}
+        />
+
+        <ThemedText type="defaultSemiBold" style={styles.filterLabel}>
+          Category
+        </ThemedText>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.chipRow}
+          accessibilityRole="list">
+          <Pressable
+            onPress={() => setSelectedCategoryId(null)}
+            accessibilityRole="button"
+            accessibilityState={{ selected: selectedCategoryId === null }}
+            accessibilityLabel="All categories"
+            style={({ pressed }) => [
+              styles.chip,
+              {
+                borderColor: selectedCategoryId === null ? palette.tint : palette.icon,
+                backgroundColor:
+                  selectedCategoryId === null ? `${palette.tint}22` : palette.background,
+                opacity: pressed ? 0.85 : 1,
+              },
+            ]}>
+            <ThemedText
+              style={[
+                styles.chipText,
+                { fontWeight: selectedCategoryId === null ? '700' : '500' },
+              ]}>
+              All
+            </ThemedText>
+          </Pressable>
+          {categoryChips.map((c) => {
+            const selected = selectedCategoryId === c.id;
+            return (
+              <Pressable
+                key={c.id}
+                onPress={() => setSelectedCategoryId(c.id)}
+                accessibilityRole="button"
+                accessibilityState={{ selected }}
+                accessibilityLabel={`Filter by category ${c.name}`}
+                style={({ pressed }) => [
+                  styles.chip,
+                  {
+                    borderColor: selected ? palette.tint : palette.icon,
+                    backgroundColor: selected ? `${palette.tint}22` : palette.background,
+                    opacity: pressed ? 0.85 : 1,
+                  },
+                ]}>
+                <ThemedText style={[styles.chipText, { fontWeight: selected ? '700' : '500' }]}>
+                  {c.name}
+                </ThemedText>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+
         {rows.length === 0 ? (
           <ThemedText style={styles.muted}>
-            No applications found. (If this is a fresh install, seed should create sample data.)
+            {searchText.trim().length > 0 || selectedCategoryId != null
+              ? 'No applications match these filters. Clear search or tap All to see every row.'
+              : 'No applications found. (If this is a fresh install, seed should create sample data.)'}
           </ThemedText>
         ) : null}
       </View>
@@ -169,7 +265,7 @@ export default function JobApplicationScreen() {
           </Pressable>
         )}
         onRefresh={() => void refresh()}
-        refreshing={loading}
+        refreshing={listRefreshing}
       />
     </ThemedView>
   );
@@ -180,6 +276,22 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
   body: { padding: 16, gap: 8 },
+  filterLabel: { marginTop: 4 },
+  searchInput: {
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 16,
+  },
+  chipRow: { flexDirection: 'row', gap: 8, paddingVertical: 4 },
+  chip: {
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  chipText: { fontSize: 14 },
   topRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
