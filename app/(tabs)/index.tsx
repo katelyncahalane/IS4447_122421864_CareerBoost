@@ -16,6 +16,7 @@ import { applications, categories } from '@/db/schema';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { clearSession } from '@/lib/session';
 import { eq, desc } from 'drizzle-orm';
+import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 
 type ApplicationRow = {
@@ -62,8 +63,14 @@ export default function JobApplicationScreen() {
     void refresh();
   }, [refresh]);
 
+  useFocusEffect(
+    useCallback(() => {
+      void refresh();
+    }, [refresh]),
+  );
+
   const onAddPressed = () => {
-    Alert.alert('Next step', 'Next small step is Add/Edit/Delete screens using SQLite.');
+    router.push('/add-application');
   };
 
   const onLogout = () => {
@@ -127,21 +134,28 @@ export default function JobApplicationScreen() {
         keyExtractor={(item) => String(item.id)}
         contentContainerStyle={styles.list}
         renderItem={({ item }) => (
-          <View style={[styles.card, { borderColor: palette.icon, backgroundColor: palette.background }]}>
-            <View style={styles.cardTop}>
-              <View style={styles.cardTitleBlock}>
-                <ThemedText type="defaultSemiBold">{item.company}</ThemedText>
-                <ThemedText style={styles.roleText}>{item.role}</ThemedText>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={`Edit application ${item.company} ${item.role}`}
+            onPress={() => router.push({ pathname: '/edit-application', params: { id: String(item.id) } })}
+            style={({ pressed }) => [{ opacity: pressed ? 0.75 : 1 }]}>
+            <View
+              style={[styles.card, { borderColor: palette.icon, backgroundColor: palette.background }]}>
+              <View style={styles.cardTop}>
+                <View style={styles.cardTitleBlock}>
+                  <ThemedText type="defaultSemiBold">{item.company}</ThemedText>
+                  <ThemedText style={styles.roleText}>{item.role}</ThemedText>
+                </View>
+                <View style={[styles.statusPill, { borderColor: palette.tint }]}>
+                  <ThemedText style={[styles.statusText, { color: palette.tint }]}>{item.status}</ThemedText>
+                </View>
               </View>
-              <View style={[styles.statusPill, { borderColor: palette.tint }]}>
-                <ThemedText style={[styles.statusText, { color: palette.tint }]}>{item.status}</ThemedText>
-              </View>
-            </View>
 
-            <ThemedText style={styles.meta}>
-              {item.appliedDate} • metric {item.metricValue} • {item.categoryName}
-            </ThemedText>
-          </View>
+              <ThemedText style={styles.meta}>
+                {item.appliedDate} • metric {item.metricValue} • {item.categoryName}
+              </ThemedText>
+            </View>
+          </Pressable>
         )}
         onRefresh={() => void refresh()}
         refreshing={loading}
