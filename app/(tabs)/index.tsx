@@ -99,7 +99,10 @@ export default function JobApplicationScreen() {
               onPress={onAddPressed}
               accessibilityRole="button"
               accessibilityLabel="Add application"
-              style={({ pressed }) => [styles.addButton, { opacity: pressed ? 0.7 : 1 }]}>
+              style={({ pressed }) => [
+                styles.addButton,
+                { borderColor: palette.tint, opacity: pressed ? 0.7 : 1 },
+              ]}>
               <ThemedText style={[styles.addText, { color: palette.tint }]}>Add</ThemedText>
             </Pressable>
             <Pressable
@@ -124,11 +127,19 @@ export default function JobApplicationScreen() {
         keyExtractor={(item) => String(item.id)}
         contentContainerStyle={styles.list}
         renderItem={({ item }) => (
-          <View style={[styles.card, { borderColor: palette.icon }]}>
-            <ThemedText type="defaultSemiBold">{item.company}</ThemedText>
-            <ThemedText>{item.role}</ThemedText>
+          <View style={[styles.card, { borderColor: palette.icon, backgroundColor: palette.background }]}>
+            <View style={styles.cardTop}>
+              <View style={styles.cardTitleBlock}>
+                <ThemedText type="defaultSemiBold">{item.company}</ThemedText>
+                <ThemedText style={styles.roleText}>{item.role}</ThemedText>
+              </View>
+              <View style={[styles.statusPill, { borderColor: palette.tint }]}>
+                <ThemedText style={[styles.statusText, { color: palette.tint }]}>{item.status}</ThemedText>
+              </View>
+            </View>
+
             <ThemedText style={styles.meta}>
-              {item.appliedDate} • metric {item.metricValue} • {item.categoryName} • {item.status}
+              {item.appliedDate} • metric {item.metricValue} • {item.categoryName}
             </ThemedText>
           </View>
         )}
@@ -168,6 +179,16 @@ const styles = StyleSheet.create({
   logoutText: { color: '#c00', fontWeight: '600' },
   muted: { opacity: 0.8, marginBottom: 8 },
   list: { paddingHorizontal: 16, paddingBottom: 16, gap: 12 },
-  card: { borderWidth: 1, borderRadius: 10, padding: 12, gap: 2 },
-  meta: { opacity: 0.8, marginTop: 4 },
+  card: { borderWidth: 1, borderRadius: 12, padding: 12, gap: 6 },
+  cardTop: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 },
+  cardTitleBlock: { flexShrink: 1, gap: 2 },
+  roleText: { opacity: 0.9 },
+  statusPill: {
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  statusText: { fontWeight: '600' },
+  meta: { opacity: 0.75 },
 });

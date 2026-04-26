@@ -1,5 +1,5 @@
 /**
- * References used for this screen (docs + source):
+ * References (docs + source):
  * - Expo Router docs (file-based routing): https://docs.expo.dev/router/introduction/
  * - Expo Router GitHub (routing library): https://github.com/expo/router
  * - React Native TextInput: https://reactnative.dev/docs/textinput
@@ -13,9 +13,8 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { Link } from 'expo-router';
-import { useRouter } from 'expo-router';
 import { setSession } from '@/lib/session';
+import { Link, useRouter } from 'expo-router';
 
 export default function LoginScreen() {
   const colorScheme = useColorScheme() ?? 'light';

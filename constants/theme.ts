@@ -5,7 +5,8 @@
 
 import { Platform } from 'react-native';
 
-const tintColorLight = '#0a7ea4';
+// Professional blue accent for the coursework app.
+const tintColorLight = '#2563eb';
 const tintColorDark = '#fff';
 
 export const Colors = {
