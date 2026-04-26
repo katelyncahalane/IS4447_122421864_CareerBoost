@@ -17,6 +17,7 @@ const MAPPING = {
   'doc.text.fill': 'description',
   'folder.fill': 'folder',
   'chart.bar.fill': 'bar-chart',
+  'chart.xyaxis.line': 'analytics',
   'chevron.left.forwardslash.chevron.right': 'code',
   'chevron.right': 'chevron-right',
 } as IconMapping;

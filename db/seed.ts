@@ -91,6 +91,27 @@ export async function seedDb(): Promise<void> {
         status: 'Rejected',
         createdAt: now,
       },
+      // extra dates so monthly / weekly insights charts are not empty on fresh seed
+      {
+        company: 'Summit Workshops',
+        role: 'UX Intern',
+        appliedDate: '2026-03-18',
+        metricValue: 1,
+        categoryId: catByName['Product / UX']!,
+        notes: 'Short placement.',
+        status: 'Applied',
+        createdAt: now,
+      },
+      {
+        company: 'Canal Digital Labs',
+        role: 'Graduate Data Engineer',
+        appliedDate: '2026-02-11',
+        metricValue: 4,
+        categoryId: catByName['Data / Analytics']!,
+        notes: 'Take-home task.',
+        status: 'Withdrawn',
+        createdAt: now,
+      },
     ]);
 
     // query – grab ids so logs can point at the right application rows

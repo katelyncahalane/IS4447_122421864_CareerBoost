@@ -9,7 +9,7 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
-// screen – bottom tabs: applications, categories, targets (rubric: CRUD, categories, goals + progress).
+// screen – bottom tabs: applications, categories, targets, insights (rubric + charts).
 export default function TabLayout() {
   const colorScheme = useColorScheme();
 
@@ -43,6 +43,14 @@ export default function TabLayout() {
           title: 'Targets',
           headerShown: true,
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="chart.bar.fill" color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="insights"
+        options={{
+          title: 'Insights',
+          headerShown: true,
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="chart.xyaxis.line" color={color} />,
         }}
       />
     </Tabs>
