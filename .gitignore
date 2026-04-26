@@ -36,6 +36,11 @@ yarn-error.*
 # typescript
 *.tsbuildinfo
 
+# local sqlite databases (do not commit)
+*.db
+*.db-shm
+*.db-wal
+
 app-example
 
 # generated native folders
