@@ -1,4 +1,4 @@
-// session – tiny asyncstorage wrapper for “logged in” username (no server)
+// session – tiny AsyncStorage wrapper for “logged in” username (no server; no passwords stored here)
 
 // imports
 import AsyncStorage from '@react-native-async-storage/async-storage';

@@ -16,6 +16,11 @@ export const Colors = {
     icon: '#687076',
     tabIconDefault: '#687076',
     tabIconSelected: tintColorLight,
+    surfaceMuted: '#f1f5f9',
+    borderSubtle: '#e2e8f0',
+    barTrack: '#e2e8f0',
+    textOnHero: '#f8fafc',
+    heroMuted: '#bfdbfe',
   },
   dark: {
     text: '#ECEDEE',
@@ -24,8 +29,21 @@ export const Colors = {
     icon: '#9BA1A6',
     tabIconDefault: '#9BA1A6',
     tabIconSelected: tintColorDark,
+    surfaceMuted: '#1e293b',
+    borderSubtle: '#334155',
+    barTrack: '#334155',
+    textOnHero: '#f8fafc',
+    heroMuted: '#93c5fd',
   },
 };
+
+// hero gradient stops – used with expo-linear-gradient (branding / first impression)
+export function heroGradientStops(scheme: 'light' | 'dark'): readonly [string, string, string] {
+  if (scheme === 'dark') {
+    return ['#0b1220', '#1e3a8a', '#2563eb'] as const;
+  }
+  return ['#1e40af', '#2563eb', '#38bdf8'] as const;
+}
 
 // fonts – platform-specific stacks (expo starter pattern)
 export const Fonts = Platform.select({

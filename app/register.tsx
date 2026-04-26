@@ -6,6 +6,7 @@ import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { HeroBanner } from '@/components/ui/hero-banner';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Link } from 'expo-router';
@@ -37,9 +38,7 @@ export default function RegisterScreen() {
   // render
   return (
     <ThemedView style={styles.container}>
-      <ThemedText type="title" style={styles.title}>
-        Register
-      </ThemedText>
+      <HeroBanner colorScheme={colorScheme} eyebrow="CareerBoost" title="Create account" />
 
       <ThemedText style={styles.muted}>
         Create an account for this device (local-only).
@@ -144,11 +143,9 @@ export default function RegisterScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingBottom: 16,
     gap: 10,
-  },
-  title: {
-    marginBottom: 4,
   },
   muted: {
     opacity: 0.8,

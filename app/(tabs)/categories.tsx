@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
+  Platform,
   Pressable,
   StyleSheet,
   View,
@@ -12,10 +13,12 @@ import {
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { HeroBanner } from '@/components/ui/hero-banner';
 import { Colors } from '@/constants/theme';
 import { db } from '@/db/client';
 import { categories } from '@/db/schema';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { cardShadowStyle } from '@/lib/card-shadow';
 import { asc } from 'drizzle-orm';
 import { useFocusEffect } from '@react-navigation/native';
 import type { Href } from 'expo-router';
@@ -75,8 +78,15 @@ export default function CategoriesScreen() {
 
   return (
     <ThemedView style={styles.flex}>
+      <HeroBanner
+        colorScheme={colorScheme}
+        eyebrow="CareerBoost · organise"
+        title="Categories"
+      />
       <View style={styles.header}>
-        <ThemedText type="title">Categories</ThemedText>
+        <ThemedText style={[styles.hint, { color: palette.icon }]}>
+          Name, colour & icon on each row
+        </ThemedText>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Add new category"
@@ -112,9 +122,20 @@ export default function CategoriesScreen() {
               } as unknown as Href) // see note on Href cast above
             }
             style={({ pressed }) => [{ opacity: pressed ? 0.85 : 1 }]}>
-            <View style={[styles.card, { borderColor: palette.icon }]}>
+            <View
+              style={[
+                styles.card,
+                cardShadowStyle,
+                { borderColor: palette.borderSubtle, backgroundColor: palette.background },
+              ]}>
               {/* decorative swatch: row pressable already has the accessible name */}
-              <View style={[styles.swatch, { backgroundColor: item.color }]} accessibilityElementsHidden />
+              <View
+                style={[
+                  styles.swatch,
+                  { backgroundColor: item.color, borderColor: `${item.color}99` },
+                ]}
+                accessibilityElementsHidden
+              />
               <View style={styles.cardText}>
                 <ThemedText type="defaultSemiBold">{item.name}</ThemedText>
                 <ThemedText style={styles.meta}>Icon: {item.icon}</ThemedText>
@@ -132,12 +153,13 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 10 },
   muted: { opacity: 0.85 },
+  hint: { flex: 1, fontSize: 14, fontWeight: '600' },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingTop: 8,
+    paddingTop: 12,
     paddingBottom: 12,
     gap: 12,
   },
@@ -155,10 +177,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
     borderWidth: 1,
-    borderRadius: 12,
-    padding: 12,
+    borderRadius: 14,
+    padding: 14,
   },
-  swatch: { width: 40, height: 40, borderRadius: 20, borderWidth: 1, borderColor: '#00000022' },
+  swatch: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: Platform.OS === 'web' ? 1 : 2,
+  },
   cardText: { flex: 1, gap: 4 },
   meta: { opacity: 0.8, fontSize: 14 },
 });

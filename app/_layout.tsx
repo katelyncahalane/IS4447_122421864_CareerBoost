@@ -9,6 +9,7 @@ import { useEffect } from 'react';
 import { ActivityIndicator, Text, View } from 'react-native';
 import 'react-native-reanimated';
 
+import { AppColorSchemeProvider } from '@/contexts/app-color-scheme';
 import { db } from '@/db/client';
 import { seedDb } from '@/db/seed';
 import migrations from '@/drizzle/migrations';
@@ -19,8 +20,17 @@ export const unstable_settings = {
   anchor: 'index',
 };
 
-// screen – wrap whole app after db is ready
+// provider – wraps navigation so every screen shares persisted light/dark preference
 export default function RootLayout() {
+  return (
+    <AppColorSchemeProvider>
+      <RootLayoutInner />
+    </AppColorSchemeProvider>
+  );
+}
+
+// screen – wrap whole app after db is ready
+function RootLayoutInner() {
   const colorScheme = useColorScheme();
   const { success, error } = useMigrations(db, migrations);
 
@@ -64,7 +74,7 @@ export default function RootLayout() {
         <Stack.Screen name="add-application" options={{ title: 'Add application' }} />
         <Stack.Screen name="edit-application" options={{ title: 'Edit application' }} />
       </Stack>
-      <StatusBar style="auto" />
+      <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
     </ThemeProvider>
   );
 }

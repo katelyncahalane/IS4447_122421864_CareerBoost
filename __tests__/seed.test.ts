@@ -1,4 +1,4 @@
-// unit test – seed fills all core tables once; second run is a no-op
+// unit test – seed inserts into applications, categories, targets, and application_status_logs (idempotent)
 
 // imports
 import { seedDb } from '@/db/seed';
@@ -71,12 +71,10 @@ jest.mock('@/db/client', () => {
 
 // tests
 describe('seedDb', () => {
-  it('inserts into all core tables and is idempotent', async () => {
-    await seedDb();
-
-    const { db } = require('@/db/client');
+  it('inserts into all core tables once with no errors', async () => {
     await expect(seedDb()).resolves.toBeUndefined();
 
+    const { db } = require('@/db/client');
     const c1 = (await (db as any).select({ c: 1 }).from(categories))[0].c;
     const c2 = (await (db as any).select({ c: 1 }).from(applications))[0].c;
     const c3 = (await (db as any).select({ c: 1 }).from(applicationStatusLogs))[0].c;
@@ -86,5 +84,21 @@ describe('seedDb', () => {
     expect(c2).toBeGreaterThan(0);
     expect(c3).toBeGreaterThan(0);
     expect(c4).toBeGreaterThan(0);
+  });
+
+  it('second seed does not duplicate rows (idempotent)', async () => {
+    const { db } = require('@/db/client');
+    const counts = async () => ({
+      categories: (await (db as any).select({ c: 1 }).from(categories))[0].c as number,
+      applications: (await (db as any).select({ c: 1 }).from(applications))[0].c as number,
+      logs: (await (db as any).select({ c: 1 }).from(applicationStatusLogs))[0].c as number,
+      targets: (await (db as any).select({ c: 1 }).from(targets))[0].c as number,
+    });
+
+    await seedDb();
+    const first = await counts();
+    await seedDb();
+    const second = await counts();
+    expect(second).toEqual(first);
   });
 });

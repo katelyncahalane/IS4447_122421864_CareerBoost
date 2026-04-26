@@ -5,6 +5,13 @@ jest.mock('@/hooks/use-color-scheme', () => ({
   useColorScheme: () => 'light',
 }));
 
+jest.mock('@/contexts/app-color-scheme', () => ({
+  useThemeControls: () => ({
+    toggleColorScheme: jest.fn(),
+    resetToSystemTheme: jest.fn(async () => {}),
+  }),
+}));
+
 // mock – run focus effect like a normal useeffect so refresh() actually runs
 jest.mock('@react-navigation/native', () => {
   const React = require('react');

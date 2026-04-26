@@ -30,7 +30,8 @@ yarn-error.*
 .DS_Store
 *.pem
 
-# local env files
+# local env files (never commit secrets — API keys stay in .env on your machine only)
+.env
 .env*.local
 
 # typescript

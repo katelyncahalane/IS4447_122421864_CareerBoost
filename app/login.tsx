@@ -6,6 +6,7 @@ import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { HeroBanner } from '@/components/ui/hero-banner';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { setSession } from '@/lib/session';
@@ -30,9 +31,7 @@ export default function LoginScreen() {
   // render
   return (
     <ThemedView style={styles.container}>
-      <ThemedText type="title" style={styles.title}>
-        Login
-      </ThemedText>
+      <HeroBanner colorScheme={colorScheme} eyebrow="CareerBoost" title="Sign in" />
 
       <ThemedText type="defaultSemiBold">Username</ThemedText>
       <TextInput
@@ -109,11 +108,9 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingBottom: 16,
     gap: 10,
-  },
-  title: {
-    marginBottom: 8,
   },
   input: {
     borderWidth: 1,

@@ -11,10 +11,12 @@ import {
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { HeroBanner } from '@/components/ui/hero-banner';
 import { Colors } from '@/constants/theme';
 import { db } from '@/db/client';
 import { applications, categories, targets } from '@/db/schema';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { cardShadowStyle } from '@/lib/card-shadow';
 import { countApplicationsForTarget } from '@/lib/target-progress';
 import { desc } from 'drizzle-orm';
 import { useFocusEffect } from '@react-navigation/native';
@@ -127,10 +129,12 @@ export default function TargetsScreen() {
 
   return (
     <ThemedView style={styles.flex}>
-      <View style={styles.header}>
-        <ThemedText type="title">Targets</ThemedText>
-      </View>
-      <ThemedText style={styles.note}>{headerNote}</ThemedText>
+      <HeroBanner
+        colorScheme={colorScheme}
+        eyebrow="CareerBoost · weekly & monthly"
+        title="Targets"
+      />
+      <ThemedText style={[styles.note, { color: palette.icon }]}>{headerNote}</ThemedText>
 
       {rows.length === 0 ? (
         <ThemedText style={styles.empty}>No targets yet. Seed adds demo targets for charts and progress.</ThemedText>
@@ -144,14 +148,18 @@ export default function TargetsScreen() {
         onRefresh={() => void refresh()}
         renderItem={({ item }) => (
           <View
-            style={[styles.card, { borderColor: palette.icon }]}
+            style={[
+              styles.card,
+              cardShadowStyle,
+              { borderColor: palette.borderSubtle, backgroundColor: palette.background },
+            ]}
             accessible
             accessibilityLabel={`${item.title}. ${item.periodLabel}. ${item.statusLabel}`}>
             <ThemedText type="defaultSemiBold">{item.title}</ThemedText>
             <ThemedText style={styles.meta}>{item.periodLabel}</ThemedText>
             <ThemedText style={styles.status}>{item.statusLabel}</ThemedText>
             <View
-              style={styles.barTrack}
+              style={[styles.barTrack, { backgroundColor: palette.barTrack }]}
               accessibilityRole="progressbar"
               accessibilityLabel={`Progress ${item.currentCount} of ${item.goalCount}`}
               accessibilityValue={{ now: item.currentCount, min: 0, max: item.goalCount }}>
@@ -174,19 +182,17 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 10 },
   muted: { opacity: 0.85 },
-  header: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 8 },
-  note: { paddingHorizontal: 16, opacity: 0.85, marginBottom: 8, fontSize: 14 },
+  note: { paddingHorizontal: 16, marginBottom: 8, marginTop: 4, fontSize: 14, fontWeight: '500' },
   empty: { paddingHorizontal: 16, opacity: 0.85, marginBottom: 8 },
   list: { paddingHorizontal: 16, paddingBottom: 24, gap: 12 },
-  card: { borderWidth: 1, borderRadius: 12, padding: 12, gap: 6 },
+  card: { borderWidth: 1, borderRadius: 14, padding: 14, gap: 8 },
   meta: { opacity: 0.8, fontSize: 14 },
   status: { fontSize: 15, fontWeight: '600' },
   barTrack: {
-    height: 10,
+    height: 12,
     borderRadius: 999,
-    backgroundColor: '#e5e7eb',
     overflow: 'hidden',
-    marginTop: 4,
+    marginTop: 6,
   },
   barFill: { height: '100%', borderRadius: 999 },
 });
