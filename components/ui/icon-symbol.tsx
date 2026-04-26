@@ -16,6 +16,7 @@ const MAPPING = {
   'paperplane.fill': 'send',
   'doc.text.fill': 'description',
   'folder.fill': 'folder',
+  'chart.bar.fill': 'bar-chart',
   'chevron.left.forwardslash.chevron.right': 'code',
   'chevron.right': 'chevron-right',
 } as IconMapping;
