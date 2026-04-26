@@ -31,4 +31,11 @@ describe('FormField', () => {
     fireEvent.changeText(input, 'Acme Inc');
     expect(onChangeText).toHaveBeenCalledWith('Acme Inc');
   });
+
+  it('shows error text when errorText is set', () => {
+    const screen = render(
+      <FormField label="Company" value="" onChangeText={jest.fn()} errorText="Too short." />,
+    );
+    expect(screen.getByText('Too short.')).toBeTruthy();
+  });
 });

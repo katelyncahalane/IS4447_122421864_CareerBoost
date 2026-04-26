@@ -19,6 +19,8 @@ import { Colors } from '@/constants/theme';
 import { db } from '@/db/client';
 import { applicationStatusLogs, applications, categories } from '@/db/schema';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import type { ApplicationFormErrors } from '@/lib/validate-application-form';
+import { validateApplicationForm } from '@/lib/validate-application-form';
 import { asc, eq } from 'drizzle-orm';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 
@@ -50,6 +52,8 @@ export default function EditApplicationScreen() {
   const [status, setStatus] = useState<Status>('Applied');
   const [initialStatus, setInitialStatus] = useState<Status>('Applied');
   const [categoryId, setCategoryId] = useState<number | null>(null);
+
+  const [fieldErrors, setFieldErrors] = useState<ApplicationFormErrors>({});
 
   // derived
   const selectedCategory = useMemo(
@@ -125,27 +129,25 @@ export default function EditApplicationScreen() {
 
   // handler – save edits; append status log only if status changed
   const onSave = async () => {
-    const trimmedCompany = company.trim();
-    const trimmedRole = role.trim();
-    const trimmedDate = appliedDate.trim();
-    const parsedMetric = Number.parseInt(metricValue, 10);
-
-    if (!trimmedCompany || !trimmedRole) {
-      Alert.alert('Missing fields', 'Company and role are required.');
+    const check = validateApplicationForm({
+      company,
+      role,
+      appliedDate,
+      metricValue,
+      categoryId,
+    });
+    if (!check.ok) {
+      setFieldErrors(check.errors);
       return;
     }
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(trimmedDate)) {
-      Alert.alert('Invalid date', 'Use YYYY-MM-DD.');
-      return;
-    }
-    if (!Number.isFinite(parsedMetric) || parsedMetric <= 0) {
-      Alert.alert('Invalid metric', 'Metric must be a positive number.');
-      return;
-    }
-    if (categoryId == null) {
-      Alert.alert('Missing category', 'Please select a category.');
-      return;
-    }
+    setFieldErrors({});
+    const {
+      company: trimmedCompany,
+      role: trimmedRole,
+      appliedDate: trimmedDate,
+      metricValue: parsedMetric,
+      categoryId: chosenCategoryId,
+    } = check.values;
 
     try {
       const now = Date.now();
@@ -157,7 +159,7 @@ export default function EditApplicationScreen() {
           status,
           appliedDate: trimmedDate,
           metricValue: parsedMetric,
-          categoryId,
+          categoryId: chosenCategoryId,
           notes: notes.trim() ? notes.trim() : null,
         })
         .where(eq(applications.id, id));
@@ -218,32 +220,48 @@ export default function EditApplicationScreen() {
         <FormField
           label="Company"
           value={company}
-          onChangeText={setCompany}
+          onChangeText={(v) => {
+            setCompany(v);
+            setFieldErrors((e) => ({ ...e, company: undefined }));
+          }}
           placeholder="e.g. Northwind Retail"
           autoCapitalize="words"
+          errorText={fieldErrors.company}
         />
         <FormField
           label="Role"
           value={role}
-          onChangeText={setRole}
+          onChangeText={(v) => {
+            setRole(v);
+            setFieldErrors((e) => ({ ...e, role: undefined }));
+          }}
           placeholder="e.g. Junior React Native Developer"
           autoCapitalize="words"
+          errorText={fieldErrors.role}
         />
         <FormField
           label="Applied date (YYYY-MM-DD)"
           value={appliedDate}
-          onChangeText={setAppliedDate}
+          onChangeText={(v) => {
+            setAppliedDate(v);
+            setFieldErrors((e) => ({ ...e, appliedDate: undefined }));
+          }}
           placeholder="2026-04-26"
           keyboardType="numeric"
           autoCapitalize="none"
+          errorText={fieldErrors.appliedDate}
         />
         <FormField
           label="Metric value"
           value={metricValue}
-          onChangeText={setMetricValue}
+          onChangeText={(v) => {
+            setMetricValue(v);
+            setFieldErrors((e) => ({ ...e, metricValue: undefined }));
+          }}
           placeholder="e.g. 1"
           keyboardType="numeric"
           autoCapitalize="none"
+          errorText={fieldErrors.metricValue}
         />
 
         <View style={styles.fieldBlock}>
@@ -251,13 +269,18 @@ export default function EditApplicationScreen() {
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Select category"
+            accessibilityHint={fieldErrors.category ?? undefined}
             onPress={() => setCategoryModalOpen(true)}
             style={({ pressed }) => [
               styles.select,
-              { borderColor: palette.icon, opacity: pressed ? 0.7 : 1 },
+              {
+                borderColor: fieldErrors.category ? '#c00' : palette.icon,
+                opacity: pressed ? 0.7 : 1,
+              },
             ]}>
             <ThemedText>{selectedCategory ? selectedCategory.name : 'Select…'}</ThemedText>
           </Pressable>
+          {fieldErrors.category ? <ThemedText style={styles.errorText}>{fieldErrors.category}</ThemedText> : null}
         </View>
 
         <View style={styles.fieldBlock}>
@@ -347,7 +370,10 @@ export default function EditApplicationScreen() {
                   key={c.id}
                   accessibilityRole="button"
                   accessibilityLabel={`Choose category ${c.name}`}
-                  onPress={() => setCategoryId(c.id)}
+                  onPress={() => {
+                    setCategoryId(c.id);
+                    setFieldErrors((e) => ({ ...e, category: undefined }));
+                  }}
                   style={({ pressed }) => [
                     styles.categoryRow,
                     {
@@ -374,6 +400,7 @@ const styles = StyleSheet.create({
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10 },
   body: { padding: 16, gap: 14 },
   muted: { opacity: 0.8 },
+  errorText: { color: '#c00', fontSize: 13 },
   fieldBlock: { gap: 6 },
   select: {
     borderWidth: 1,

@@ -17,6 +17,7 @@ type Props = {
   autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
   secureTextEntry?: boolean;
   multiline?: boolean;
+  errorText?: string;
 };
 
 // component
@@ -29,9 +30,11 @@ export default function FormField({
   autoCapitalize = 'none',
   secureTextEntry = false,
   multiline = false,
+  errorText,
 }: Props) {
   const colorScheme = useColorScheme() ?? 'light';
   const palette = Colors[colorScheme];
+  const hasError = Boolean(errorText);
 
   // render – stack label above bordered input
   return (
@@ -47,12 +50,14 @@ export default function FormField({
         secureTextEntry={secureTextEntry}
         multiline={multiline}
         accessibilityLabel={label}
+        accessibilityHint={hasError ? errorText : undefined}
         style={[
           styles.input,
           multiline ? styles.inputMultiline : null,
-          { color: palette.text, borderColor: palette.icon },
+          { color: palette.text, borderColor: hasError ? '#c00' : palette.icon },
         ]}
       />
+      {errorText ? <ThemedText style={styles.error}>{errorText}</ThemedText> : null}
     </View>
   );
 }
@@ -60,6 +65,7 @@ export default function FormField({
 // styles
 const styles = StyleSheet.create({
   container: { gap: 6 },
+  error: { color: '#c00', fontSize: 13 },
   input: {
     borderWidth: 1,
     borderRadius: 10,
