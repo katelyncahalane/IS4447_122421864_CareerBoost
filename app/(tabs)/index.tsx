@@ -2,55 +2,57 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  KeyboardAvoidingView,
-  Platform,
+  FlatList,
   Pressable,
-  ScrollView,
   StyleSheet,
-  TextInput,
   View,
 } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Colors } from '@/constants/theme';
+import { db } from '@/db/client';
+import { applications, categories } from '@/db/schema';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import {
-  deleteJobApplication,
-  loadJobApplication,
-  type JobApplication,
-  saveJobApplication,
-} from '@/lib/job-application-storage';
 import { clearSession } from '@/lib/session';
+import { eq, desc } from 'drizzle-orm';
 import { useRouter } from 'expo-router';
 
-const emptyForm = (): JobApplication => ({
-  company: '',
-  role: '',
-  status: '',
-  notes: '',
-});
+type ApplicationRow = {
+  id: number;
+  company: string;
+  role: string;
+  status: string;
+  appliedDate: string;
+  metricValue: number;
+  categoryName: string;
+};
 
 export default function JobApplicationScreen() {
   const colorScheme = useColorScheme() ?? 'light';
   const palette = Colors[colorScheme];
   const router = useRouter();
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState<JobApplication>(emptyForm());
-  const [hasRecord, setHasRecord] = useState(false);
+  const [rows, setRows] = useState<ApplicationRow[]>([]);
 
   const refresh = useCallback(async () => {
     setLoading(true);
     try {
-      const app = await loadJobApplication();
-      if (app) {
-        setForm(app);
-        setHasRecord(true);
-      } else {
-        setForm(emptyForm());
-        setHasRecord(false);
-      }
+      const data = await db
+        .select({
+          id: applications.id,
+          company: applications.company,
+          role: applications.role,
+          status: applications.status,
+          appliedDate: applications.appliedDate,
+          metricValue: applications.metricValue,
+          categoryName: categories.name,
+        })
+        .from(applications)
+        .innerJoin(categories, eq(applications.categoryId, categories.id))
+        .orderBy(desc(applications.appliedDate));
+
+      setRows(data);
     } finally {
       setLoading(false);
     }
@@ -60,39 +62,8 @@ export default function JobApplicationScreen() {
     void refresh();
   }, [refresh]);
 
-  const onSave = async () => {
-    if (!form.company.trim() || !form.role.trim()) {
-      Alert.alert('Missing fields', 'Please enter at least company and role.');
-      return;
-    }
-    setSaving(true);
-    try {
-      await saveJobApplication({
-        company: form.company.trim(),
-        role: form.role.trim(),
-        status: form.status.trim(),
-        notes: form.notes.trim(),
-      });
-      setHasRecord(true);
-      Alert.alert('Saved', 'Your job application was updated.');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const onDelete = () => {
-    Alert.alert('Delete application?', 'This clears your saved application.', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          await deleteJobApplication();
-          setForm(emptyForm());
-          setHasRecord(false);
-        },
-      },
-    ]);
+  const onAddPressed = () => {
+    Alert.alert('Next step', 'Next small step is Add/Edit/Delete screens using SQLite.');
   };
 
   const onLogout = () => {
@@ -119,17 +90,18 @@ export default function JobApplicationScreen() {
   }
 
   return (
-    <KeyboardAvoidingView
-      style={styles.flex}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}>
-      <ScrollView
-        contentContainerStyle={styles.scroll}
-        keyboardShouldPersistTaps="handled"
-        keyboardDismissMode="on-drag">
-        <ThemedView style={styles.body}>
-          <View style={styles.topRow}>
-            <ThemedText type="title">Job application</ThemedText>
+    <ThemedView style={styles.flex}>
+      <View style={styles.body}>
+        <View style={styles.topRow}>
+          <ThemedText type="title">Applications</ThemedText>
+          <View style={styles.topActions}>
+            <Pressable
+              onPress={onAddPressed}
+              accessibilityRole="button"
+              accessibilityLabel="Add application"
+              style={({ pressed }) => [styles.addButton, { opacity: pressed ? 0.7 : 1 }]}>
+              <ThemedText style={[styles.addText, { color: palette.tint }]}>Add</ThemedText>
+            </Pressable>
             <Pressable
               onPress={onLogout}
               accessibilityRole="button"
@@ -138,94 +110,38 @@ export default function JobApplicationScreen() {
               <ThemedText style={styles.logoutText}>Log out</ThemedText>
             </Pressable>
           </View>
+        </View>
 
-          {!hasRecord ? (
-            <ThemedText style={styles.muted}>
-              No application saved. Enter details below and tap Save to add one.
+        {rows.length === 0 ? (
+          <ThemedText style={styles.muted}>
+            No applications found. (If this is a fresh install, seed should create sample data.)
+          </ThemedText>
+        ) : null}
+      </View>
+
+      <FlatList
+        data={rows}
+        keyExtractor={(item) => String(item.id)}
+        contentContainerStyle={styles.list}
+        renderItem={({ item }) => (
+          <View style={[styles.card, { borderColor: palette.icon }]}>
+            <ThemedText type="defaultSemiBold">{item.company}</ThemedText>
+            <ThemedText>{item.role}</ThemedText>
+            <ThemedText style={styles.meta}>
+              {item.appliedDate} • metric {item.metricValue} • {item.categoryName} • {item.status}
             </ThemedText>
-          ) : null}
-
-          <ThemedText type="defaultSemiBold">Company</ThemedText>
-          <TextInput
-            value={form.company}
-            onChangeText={(company) => setForm((f) => ({ ...f, company }))}
-            placeholder="Company name"
-            placeholderTextColor={palette.icon}
-            style={[styles.input, { color: palette.text, borderColor: palette.icon }]}
-          />
-
-          <ThemedText type="defaultSemiBold">Role</ThemedText>
-          <TextInput
-            value={form.role}
-            onChangeText={(role) => setForm((f) => ({ ...f, role }))}
-            placeholder="Job title"
-            placeholderTextColor={palette.icon}
-            style={[styles.input, { color: palette.text, borderColor: palette.icon }]}
-          />
-
-          <ThemedText type="defaultSemiBold">Status</ThemedText>
-          <TextInput
-            value={form.status}
-            onChangeText={(status) => setForm((f) => ({ ...f, status }))}
-            placeholder="e.g. Applied, Interview"
-            placeholderTextColor={palette.icon}
-            style={[styles.input, { color: palette.text, borderColor: palette.icon }]}
-          />
-
-          <ThemedText type="defaultSemiBold">Notes</ThemedText>
-          <TextInput
-            value={form.notes}
-            onChangeText={(notes) => setForm((f) => ({ ...f, notes }))}
-            placeholder="Optional notes"
-            placeholderTextColor={palette.icon}
-            multiline
-            style={[
-              styles.input,
-              styles.notes,
-              { color: palette.text, borderColor: palette.icon },
-            ]}
-          />
-
-          <View style={styles.actions}>
-            <Pressable
-              onPress={() => void onSave()}
-              disabled={saving}
-              style={({ pressed }) => [
-                styles.button,
-                { backgroundColor: palette.tint, opacity: pressed || saving ? 0.85 : 1 },
-              ]}>
-              {saving ? (
-                <ActivityIndicator color={colorScheme === 'dark' ? '#111' : '#fff'} />
-              ) : (
-                <ThemedText
-                  style={[styles.buttonLabel, { color: colorScheme === 'dark' ? '#111' : '#fff' }]}>
-                  Save
-                </ThemedText>
-              )}
-            </Pressable>
-
-            {hasRecord ? (
-              <Pressable
-                onPress={onDelete}
-                style={({ pressed }) => [
-                  styles.button,
-                  styles.deleteButton,
-                  { borderColor: '#c00', opacity: pressed ? 0.85 : 1 },
-                ]}>
-                <ThemedText style={styles.deleteLabel}>Delete</ThemedText>
-              </Pressable>
-            ) : null}
           </View>
-        </ThemedView>
-      </ScrollView>
-    </KeyboardAvoidingView>
+        )}
+        onRefresh={() => void refresh()}
+        refreshing={loading}
+      />
+    </ThemedView>
   );
 }
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
-  scroll: { flexGrow: 1 },
   body: { padding: 16, gap: 8 },
   topRow: {
     flexDirection: 'row',
@@ -234,6 +150,14 @@ const styles = StyleSheet.create({
     gap: 12,
     marginBottom: 4,
   },
+  topActions: { flexDirection: 'row', gap: 10, alignItems: 'center' },
+  addButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  addText: { fontWeight: '600' },
   logoutButton: {
     paddingVertical: 8,
     paddingHorizontal: 10,
@@ -243,24 +167,7 @@ const styles = StyleSheet.create({
   },
   logoutText: { color: '#c00', fontWeight: '600' },
   muted: { opacity: 0.8, marginBottom: 8 },
-  input: {
-    borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 16,
-  },
-  notes: { minHeight: 100, textAlignVertical: 'top' },
-  actions: { flexDirection: 'row', gap: 12, marginTop: 16, flexWrap: 'wrap' },
-  button: {
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-    minWidth: 120,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  buttonLabel: { fontWeight: '600', fontSize: 16 },
-  deleteButton: { backgroundColor: 'transparent', borderWidth: 1 },
-  deleteLabel: { color: '#c00', fontWeight: '600', fontSize: 16 },
+  list: { paddingHorizontal: 16, paddingBottom: 16, gap: 12 },
+  card: { borderWidth: 1, borderRadius: 10, padding: 12, gap: 2 },
+  meta: { opacity: 0.8, marginTop: 4 },
 });

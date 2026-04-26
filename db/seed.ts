@@ -9,12 +9,6 @@ import {
 } from '@/db/schema';
 
 /**
- * Coursework seed data for Option C (Job Application Tracker).
- *
- * Idempotency:
- * - If *any* core table already contains rows, we skip seeding entirely.
- * - This guarantees calling `seedDb()` twice does not duplicate rows.
- *
  * References:
  * - Drizzle transactions: https://orm.drizzle.team/docs/transactions
  * - Drizzle inserts/selects: https://orm.drizzle.team/docs/insert
