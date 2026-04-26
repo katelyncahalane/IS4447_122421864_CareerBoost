@@ -1,4 +1,11 @@
-// seed – insert demo rows once if all core tables are empty (safe re-run)
+/**
+ * Single seed entrypoint for CareerBoost (`seedDb`).
+ * Populates ALL coursework tables in one transaction when the DB is empty:
+ *   categories → applications → application_status_logs → targets
+ * Each application has: applied_date, metric_value, category_id, optional notes, current status;
+ * logs show status changes over time; targets are weekly/monthly (global + per-category).
+ * Idempotent: if any row exists in those four tables, the whole seed is skipped (no duplicates).
+ */
 
 // imports
 import { count } from 'drizzle-orm';
@@ -178,6 +185,38 @@ export async function seedDb(): Promise<void> {
         status: 'Rejected',
         note: 'Role filled internally',
         createdAt: now - 1000 * 60 * 60 * 24 * 8,
+      },
+
+      {
+        applicationId: appIdByCompany['Summit Workshops']!,
+        status: 'Applied',
+        note: 'Speculative email to hiring lead',
+        createdAt: now - 1000 * 60 * 60 * 24 * 3,
+      },
+      {
+        applicationId: appIdByCompany['Summit Workshops']!,
+        status: 'Screening',
+        note: 'Portfolio link requested',
+        createdAt: now - 1000 * 60 * 60 * 24 * 1,
+      },
+
+      {
+        applicationId: appIdByCompany['Canal Digital Labs']!,
+        status: 'Applied',
+        note: 'Applied on company careers site',
+        createdAt: now - 1000 * 60 * 60 * 24 * 9,
+      },
+      {
+        applicationId: appIdByCompany['Canal Digital Labs']!,
+        status: 'Interview',
+        note: 'Phone screen with team lead',
+        createdAt: now - 1000 * 60 * 60 * 24 * 4,
+      },
+      {
+        applicationId: appIdByCompany['Canal Digital Labs']!,
+        status: 'Withdrawn',
+        note: 'Accepted another offer',
+        createdAt: now - 1000 * 60 * 60 * 24 * 2,
       },
     ]);
 
