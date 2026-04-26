@@ -9,7 +9,7 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
-// screen – single applications tab for now (keep coursework simple)
+// screen – bottom tabs: applications (main CRUD list) and categories (rubric: create/edit categories).
 export default function TabLayout() {
   const colorScheme = useColorScheme();
 
@@ -24,9 +24,17 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Application',
+          title: 'Applications',
           headerShown: true,
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="doc.text.fill" color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="categories"
+        options={{
+          title: 'Categories',
+          headerShown: true,
+          tabBarIcon: ({ color }) => <IconSymbol size={28} name="folder.fill" color={color} />,
         }}
       />
     </Tabs>

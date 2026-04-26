@@ -58,6 +58,11 @@ export default function RootLayout() {
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="login" options={{ title: 'Login' }} />
         <Stack.Screen name="register" options={{ title: 'Register' }} />
+        {/* stack screens opened from tabs (headers optional; each file can also set Stack.Screen) */}
+        <Stack.Screen name="add-category" options={{ title: 'Add category' }} />
+        <Stack.Screen name="edit-category" options={{ title: 'Edit category' }} />
+        <Stack.Screen name="add-application" options={{ title: 'Add application' }} />
+        <Stack.Screen name="edit-application" options={{ title: 'Edit application' }} />
       </Stack>
       <StatusBar style="auto" />
     </ThemeProvider>

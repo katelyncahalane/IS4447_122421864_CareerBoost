@@ -23,7 +23,7 @@ export type ValidApplicationForm = {
   categoryId: number;
 };
 
-// function – return errors map or valid payload (metric stored as whole number in sqlite)
+// function – return errors map or valid payload (`applications.metric_value` is an integer in drizzle schema)
 export function validateApplicationForm(input: ApplicationFormInput):
   | { ok: true; values: ValidApplicationForm }
   | { ok: false; errors: ApplicationFormErrors } {
