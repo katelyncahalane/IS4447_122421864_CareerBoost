@@ -189,7 +189,11 @@ export default function JobApplicationScreen() {
       />
       <View style={styles.body}>
         <View style={styles.topRow}>
-          <View style={styles.topActions}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator
+            contentContainerStyle={styles.topActions}
+            accessibilityLabel="Application actions">
             <Pressable
               onPress={onAddPressed}
               accessibilityRole="button"
@@ -233,8 +237,15 @@ export default function JobApplicationScreen() {
               ]}>
               <Ionicons name="trash-outline" size={20} color="#b91c1c" />
             </Pressable>
-          </View>
+          </ScrollView>
         </View>
+        <Pressable
+          onPress={onDeleteProfile}
+          accessibilityRole="button"
+          accessibilityHint="Wipes database so seed can run again on next open"
+          style={({ pressed }) => [styles.resetLinkWrap, { opacity: pressed ? 0.8 : 1 }]}>
+          <ThemedText style={styles.resetLink}>Reset all local data (fresh seed demo)</ThemedText>
+        </Pressable>
 
         <View style={styles.statBlock}>
           <StatStrip
@@ -464,10 +475,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'flex-end',
     alignItems: 'center',
-    gap: 12,
-    marginBottom: 8,
+    marginBottom: 4,
   },
-  topActions: { flexDirection: 'row', gap: 8, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' },
+  topActions: {
+    flexDirection: 'row',
+    gap: 8,
+    alignItems: 'center',
+    paddingVertical: 4,
+    paddingRight: 4,
+  },
+  resetLinkWrap: { alignSelf: 'flex-end', marginBottom: 10, paddingVertical: 4 },
+  resetLink: { color: '#b91c1c', fontSize: 13, fontWeight: '700', textDecorationLine: 'underline' },
   iconButton: {
     paddingVertical: 8,
     paddingHorizontal: 10,
