@@ -1,10 +1,6 @@
-/**
- * Edit Job Application screen (Records: Update/Delete).
- *
- * References:
- * - Expo Router params: https://docs.expo.dev/router/reference/url-parameters/
- * - Drizzle update/delete: https://orm.drizzle.team/docs/update
- */
+// edit application screen – update or delete one row (update / delete in crud)
+
+// imports
 import { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -26,11 +22,13 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { asc, eq } from 'drizzle-orm';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 
+// types
 type CategoryRow = { id: number; name: string; color: string; icon: string };
 
 const STATUSES = ['Applied', 'Screening', 'Interview', 'Offer', 'Rejected'] as const;
 type Status = (typeof STATUSES)[number];
 
+// screen
 export default function EditApplicationScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ id?: string }>();
@@ -39,6 +37,7 @@ export default function EditApplicationScreen() {
   const colorScheme = useColorScheme() ?? 'light';
   const palette = Colors[colorScheme];
 
+  // state
   const [loading, setLoading] = useState(true);
   const [cats, setCats] = useState<CategoryRow[]>([]);
   const [categoryModalOpen, setCategoryModalOpen] = useState(false);
@@ -52,11 +51,13 @@ export default function EditApplicationScreen() {
   const [initialStatus, setInitialStatus] = useState<Status>('Applied');
   const [categoryId, setCategoryId] = useState<number | null>(null);
 
+  // derived
   const selectedCategory = useMemo(
     () => cats.find((c) => c.id === categoryId) ?? null,
     [cats, categoryId],
   );
 
+  // effect – load categories + this application by id from route
   useEffect(() => {
     if (!Number.isFinite(id)) {
       Alert.alert('Invalid link', 'Missing application id.');
@@ -122,6 +123,7 @@ export default function EditApplicationScreen() {
     };
   }, [id, router]);
 
+  // handler – save edits; append status log only if status changed
   const onSave = async () => {
     const trimmedCompany = company.trim();
     const trimmedRole = role.trim();
@@ -175,6 +177,7 @@ export default function EditApplicationScreen() {
     }
   };
 
+  // handler – delete logs first so foreign keys do not block delete
   const onDelete = () => {
     Alert.alert('Delete application?', 'This will remove the application and its status history.', [
       { text: 'Cancel', style: 'cancel' },
@@ -196,6 +199,7 @@ export default function EditApplicationScreen() {
     ]);
   };
 
+  // render – loading gate
   if (loading) {
     return (
       <ThemedView style={styles.centered}>
@@ -206,6 +210,7 @@ export default function EditApplicationScreen() {
     );
   }
 
+  // render – main form + category modal
   return (
     <ThemedView style={styles.flex}>
       <Stack.Screen options={{ title: 'Edit application' }} />
@@ -363,6 +368,7 @@ export default function EditApplicationScreen() {
   );
 }
 
+// styles
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10 },
@@ -410,4 +416,3 @@ const styles = StyleSheet.create({
   },
   colorDot: { width: 14, height: 14, borderRadius: 7 },
 });
-

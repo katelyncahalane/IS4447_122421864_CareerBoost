@@ -1,11 +1,6 @@
-/**
- * References (docs + source):
- * - Expo Router docs (file-based routing): https://docs.expo.dev/router/introduction/
- * - Expo Router GitHub (routing library): https://github.com/expo/router
- * - React Native TextInput: https://reactnative.dev/docs/textinput
- * - React Native Pressable: https://reactnative.dev/docs/pressable
- * - Expo docs (getting started / Expo Go workflow): https://docs.expo.dev/
- */
+// login screen – local-only session (replace later with sqlite users if needed)
+
+// imports
 import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 
@@ -16,19 +11,23 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { setSession } from '@/lib/session';
 import { Link, useRouter } from 'expo-router';
 
+// screen
 export default function LoginScreen() {
   const colorScheme = useColorScheme() ?? 'light';
   const palette = Colors[colorScheme];
   const router = useRouter();
 
+  // state – simple form fields + inline error text
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
 
+  // derived – disable sign-in until both fields non-empty
   const canSubmit = useMemo(() => {
     return username.trim().length > 0 && password.length > 0;
   }, [password.length, username]);
 
+  // render
   return (
     <ThemedView style={styles.container}>
       <ThemedText type="title" style={styles.title}>
@@ -73,7 +72,6 @@ export default function LoginScreen() {
       <View style={styles.actions}>
         <Pressable
           onPress={() => {
-            // Next step: add real auth + navigation.
             if (!canSubmit) {
               setError('Enter your username and password.');
               return;
@@ -107,6 +105,7 @@ export default function LoginScreen() {
   );
 }
 
+// styles
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -152,4 +151,3 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
 });
-

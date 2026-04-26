@@ -1,3 +1,6 @@
+// applications tab – list job rows from sqlite (read in crud)
+
+// imports
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -19,6 +22,7 @@ import { eq, desc } from 'drizzle-orm';
 import { useFocusEffect } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 
+// types – one row for the flat list (joined category name)
 type ApplicationRow = {
   id: number;
   company: string;
@@ -29,6 +33,7 @@ type ApplicationRow = {
   categoryName: string;
 };
 
+// screen
 export default function JobApplicationScreen() {
   const colorScheme = useColorScheme() ?? 'light';
   const palette = Colors[colorScheme];
@@ -36,6 +41,7 @@ export default function JobApplicationScreen() {
   const [loading, setLoading] = useState(true);
   const [rows, setRows] = useState<ApplicationRow[]>([]);
 
+  // data – pull applications with category name, newest date first
   const refresh = useCallback(async () => {
     setLoading(true);
     try {
@@ -59,16 +65,19 @@ export default function JobApplicationScreen() {
     }
   }, []);
 
+  // effect – first load
   useEffect(() => {
     void refresh();
   }, [refresh]);
 
+  // navigation hook – refresh when you come back from add / edit
   useFocusEffect(
     useCallback(() => {
       void refresh();
     }, [refresh]),
   );
 
+  // handlers – go to add screen or log out (clears asyncstorage session)
   const onAddPressed = () => {
     router.push('/add-application');
   };
@@ -87,6 +96,7 @@ export default function JobApplicationScreen() {
     ]);
   };
 
+  // render – loading
   if (loading) {
     return (
       <ThemedView style={styles.centered}>
@@ -96,6 +106,7 @@ export default function JobApplicationScreen() {
     );
   }
 
+  // render – header + list; row tap opens edit
   return (
     <ThemedView style={styles.flex}>
       <View style={styles.body}>
@@ -164,6 +175,7 @@ export default function JobApplicationScreen() {
   );
 }
 
+// styles
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },

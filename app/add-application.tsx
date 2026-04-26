@@ -1,10 +1,6 @@
-/**
- * Add Job Application screen (Records: Create).
- *
- * References:
- * - Expo Router screens: https://docs.expo.dev/router/advanced/stack/
- * - Drizzle insert (SQLite): https://orm.drizzle.team/docs/insert
- */
+// add application screen – insert one job application into sqlite (create in crud)
+
+// imports – react, native ui, app bits
 import { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -26,12 +22,14 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { asc } from 'drizzle-orm';
 import { Stack, useRouter } from 'expo-router';
 
+// types – one row from categories table for the picker
 type CategoryRow = { id: number; name: string; color: string; icon: string };
 
+// constants – allowed status labels (must match what you store in sqlite)
 const STATUSES = ['Applied', 'Screening', 'Interview', 'Offer', 'Rejected'] as const;
 
+// helper – today as yyyy-mm-dd (local date, good enough for coursework)
 function isoToday(): string {
-  // YYYY-MM-DD in local timezone
   const d = new Date();
   const yyyy = d.getFullYear();
   const mm = String(d.getMonth() + 1).padStart(2, '0');
@@ -39,11 +37,13 @@ function isoToday(): string {
   return `${yyyy}-${mm}-${dd}`;
 }
 
+// screen – form + save + category modal
 export default function AddApplicationScreen() {
   const router = useRouter();
   const colorScheme = useColorScheme() ?? 'light';
   const palette = Colors[colorScheme];
 
+  // state – categories list + modal + form fields
   const [loadingCats, setLoadingCats] = useState(true);
   const [cats, setCats] = useState<CategoryRow[]>([]);
   const [categoryModalOpen, setCategoryModalOpen] = useState(false);
@@ -57,11 +57,13 @@ export default function AddApplicationScreen() {
 
   const [categoryId, setCategoryId] = useState<number | null>(null);
 
+  // derived – which category name to show on the button
   const selectedCategory = useMemo(
     () => cats.find((c) => c.id === categoryId) ?? null,
     [cats, categoryId],
   );
 
+  // effect – load categories once for the picker
   useEffect(() => {
     let mounted = true;
     void (async () => {
@@ -88,6 +90,7 @@ export default function AddApplicationScreen() {
     };
   }, []);
 
+  // handler – validate then insert application + first status log
   const onSave = async () => {
     const trimmedCompany = company.trim();
     const trimmedRole = role.trim();
@@ -142,6 +145,7 @@ export default function AddApplicationScreen() {
     }
   };
 
+  // render – scroll form + slide-up category chooser
   return (
     <ThemedView style={styles.flex}>
       <Stack.Screen options={{ title: 'Add application' }} />
@@ -305,6 +309,7 @@ export default function AddApplicationScreen() {
   );
 }
 
+// styles – layout only (colours mostly from theme at runtime)
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   body: { padding: 16, gap: 14 },
@@ -344,4 +349,3 @@ const styles = StyleSheet.create({
   },
   colorDot: { width: 14, height: 14, borderRadius: 7 },
 });
-

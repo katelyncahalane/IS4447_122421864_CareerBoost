@@ -1,11 +1,6 @@
-/**
- * References used for this screen (docs + source):
- * - Expo Router docs (file-based routing): https://docs.expo.dev/router/introduction/
- * - Expo Router GitHub (routing library): https://github.com/expo/router
- * - React Native TextInput: https://reactnative.dev/docs/textinput
- * - React Native Pressable: https://reactnative.dev/docs/pressable
- * - Expo docs (getting started / Expo Go workflow): https://docs.expo.dev/
- */
+// register screen – local-only session after basic password checks
+
+// imports
 import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 
@@ -17,16 +12,19 @@ import { Link } from 'expo-router';
 import { useRouter } from 'expo-router';
 import { setSession } from '@/lib/session';
 
+// screen
 export default function RegisterScreen() {
   const colorScheme = useColorScheme() ?? 'light';
   const palette = Colors[colorScheme];
   const router = useRouter();
 
+  // state
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
 
+  // derived – simple rules: username + matching passwords length 6+
   const canSubmit = useMemo(() => {
     return (
       username.trim().length > 0 &&
@@ -36,6 +34,7 @@ export default function RegisterScreen() {
     );
   }, [confirmPassword, password, username]);
 
+  // render
   return (
     <ThemedView style={styles.container}>
       <ThemedText type="title" style={styles.title}>
@@ -100,7 +99,6 @@ export default function RegisterScreen() {
       <View style={styles.actions}>
         <Pressable
           onPress={() => {
-            // Next step: add real register logic + navigation.
             if (!username.trim()) {
               setError('Enter a username.');
               return;
@@ -142,6 +140,7 @@ export default function RegisterScreen() {
   );
 }
 
+// styles
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -191,4 +190,3 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
 });
-

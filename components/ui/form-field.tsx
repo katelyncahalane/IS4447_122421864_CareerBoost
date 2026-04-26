@@ -1,15 +1,13 @@
-/**
- * References used for this component:
- * - React Native TextInput: https://reactnative.dev/docs/textinput
- * - Accessibility labels: https://reactnative.dev/docs/accessibility
- * - Expo docs: https://docs.expo.dev/
- */
+// form field – reusable label + text input (used on add / edit screens)
+
+// imports
 import { StyleSheet, TextInput, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
+// types – props for a single labelled input
 type Props = {
   label: string;
   value: string;
@@ -21,6 +19,7 @@ type Props = {
   multiline?: boolean;
 };
 
+// component
 export default function FormField({
   label,
   value,
@@ -34,6 +33,7 @@ export default function FormField({
   const colorScheme = useColorScheme() ?? 'light';
   const palette = Colors[colorScheme];
 
+  // render – stack label above bordered input
   return (
     <View style={styles.container}>
       <ThemedText type="defaultSemiBold">{label}</ThemedText>
@@ -57,6 +57,7 @@ export default function FormField({
   );
 }
 
+// styles
 const styles = StyleSheet.create({
   container: { gap: 6 },
   input: {

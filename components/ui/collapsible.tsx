@@ -1,3 +1,6 @@
+// collapsible – tap heading to show / hide child content
+
+// imports
 import { PropsWithChildren, useState } from 'react';
 import { StyleSheet, TouchableOpacity } from 'react-native';
 
@@ -7,10 +10,12 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
+// component
 export function Collapsible({ children, title }: PropsWithChildren & { title: string }) {
   const [isOpen, setIsOpen] = useState(false);
   const theme = useColorScheme() ?? 'light';
 
+  // render – chevron rotates when open
   return (
     <ThemedView>
       <TouchableOpacity
@@ -32,6 +37,7 @@ export function Collapsible({ children, title }: PropsWithChildren & { title: st
   );
 }
 
+// styles
 const styles = StyleSheet.create({
   heading: {
     flexDirection: 'row',

@@ -1,14 +1,13 @@
-/**
- * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
- * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
- */
+// theme – shared colours + font tokens for light / dark
 
+// imports
 import { Platform } from 'react-native';
 
-// Professional blue accent for the coursework app.
+// colours – blue accent for coursework branding
 const tintColorLight = '#2563eb';
 const tintColorDark = '#fff';
 
+// tokens – text, background, tab icon colours per mode
 export const Colors = {
   light: {
     text: '#11181C',
@@ -28,15 +27,13 @@ export const Colors = {
   },
 };
 
+// fonts – platform-specific stacks (expo starter pattern)
 export const Fonts = Platform.select({
   ios: {
-    /** iOS `UIFontDescriptorSystemDesignDefault` */
+    // ios system stacks
     sans: 'system-ui',
-    /** iOS `UIFontDescriptorSystemDesignSerif` */
     serif: 'ui-serif',
-    /** iOS `UIFontDescriptorSystemDesignRounded` */
     rounded: 'ui-rounded',
-    /** iOS `UIFontDescriptorSystemDesignMonospaced` */
     mono: 'ui-monospace',
   },
   default: {

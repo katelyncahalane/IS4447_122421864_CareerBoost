@@ -1,10 +1,6 @@
-/**
- * References used for routing + navigation setup:
- * - Expo Router docs (file-based routing): https://docs.expo.dev/router/introduction/
- * - Expo Router GitHub: https://github.com/expo/router
- * - React Navigation (ThemeProvider): https://reactnavigation.org/docs/themes/
- * - Drizzle Expo SQLite migrations: https://orm.drizzle.team/docs/get-started/expo-new
- */
+// root layout – theme + stack routes + run drizzle migrations then seed
+
+// imports
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useMigrations } from 'drizzle-orm/expo-sqlite/migrator';
 import { Stack } from 'expo-router';
@@ -18,19 +14,23 @@ import { seedDb } from '@/db/seed';
 import migrations from '@/drizzle/migrations';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
+// expo-router anchor (keeps deep links stable)
 export const unstable_settings = {
   anchor: 'index',
 };
 
+// screen – wrap whole app after db is ready
 export default function RootLayout() {
   const colorScheme = useColorScheme();
   const { success, error } = useMigrations(db, migrations);
 
+  // side effect – fill demo rows once migrations succeed
   useEffect(() => {
     if (!success) return;
     void seedDb();
   }, [success]);
 
+  // render – migration failed (show message, stop app shell)
   if (error) {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 16 }}>
@@ -41,6 +41,7 @@ export default function RootLayout() {
     );
   }
 
+  // render – still migrating
   if (!success) {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
@@ -50,12 +51,11 @@ export default function RootLayout() {
     );
   }
 
+  // render – normal app: tabs + auth screens
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <Stack>
-        {/* Main app tabs (protected by the session gate in `app/index.tsx`). */}
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        {/* Auth screens (local-only for this coursework app). */}
         <Stack.Screen name="login" options={{ title: 'Login' }} />
         <Stack.Screen name="register" options={{ title: 'Register' }} />
       </Stack>

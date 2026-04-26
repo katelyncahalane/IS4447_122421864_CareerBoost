@@ -1,7 +1,9 @@
+// drizzle kit config – generate sql migrations from schema (run after schema edits)
+
+// imports
 import { defineConfig } from 'drizzle-kit';
 
-// Drizzle Kit config for Expo SQLite migrations.
-// https://orm.drizzle.team/docs/get-started/expo-new
+// config – expo sqlite driver output folder
 export default defineConfig({
   schema: './db/schema.ts',
   out: './drizzle',

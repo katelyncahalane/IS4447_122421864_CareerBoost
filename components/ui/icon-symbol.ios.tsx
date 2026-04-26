@@ -1,6 +1,10 @@
+// icon symbol (ios) – native sf symbol view
+
+// imports
 import { SymbolView, SymbolViewProps, SymbolWeight } from 'expo-symbols';
 import { StyleProp, ViewStyle } from 'react-native';
 
+// component
 export function IconSymbol({
   name,
   size = 24,
@@ -14,6 +18,7 @@ export function IconSymbol({
   style?: StyleProp<ViewStyle>;
   weight?: SymbolWeight;
 }) {
+  // render
   return (
     <SymbolView
       weight={weight}

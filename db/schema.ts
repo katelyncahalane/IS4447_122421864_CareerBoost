@@ -1,11 +1,9 @@
-/**
- * Drizzle schema for the Job Application Tracker.
- *
- * References:
- * - Drizzle ORM (SQLite core): https://orm.drizzle.team/docs/sql-schema-declaration
- */
+// drizzle schema – tables for job tracker (categories, apps, logs, targets)
+
+// imports
 import { foreignKey, integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 
+// table – role buckets (name + colour + icon for ui)
 export const categories = sqliteTable('categories', {
   id: integer('id', { mode: 'number' }).primaryKey({ autoIncrement: true }),
   name: text('name').notNull(),
@@ -14,21 +12,22 @@ export const categories = sqliteTable('categories', {
   createdAt: integer('created_at', { mode: 'number' }).notNull(),
 });
 
+// table – one row per job application (must link to a category)
 export const applications = sqliteTable(
   'applications',
   {
     id: integer('id', { mode: 'number' }).primaryKey({ autoIncrement: true }),
 
-    // Brief requirements: date + metric + category reference + optional notes
-    appliedDate: text('applied_date').notNull(), // ISO date string: YYYY-MM-DD
-    metricValue: integer('metric_value', { mode: 'number' }).notNull(), // numeric metric (hours, stages, etc.)
+    // brief fields – date, metric, category id, optional notes
+    appliedDate: text('applied_date').notNull(), // iso yyyy-mm-dd
+    metricValue: integer('metric_value', { mode: 'number' }).notNull(), // e.g. hours or stages count
     categoryId: integer('category_id', { mode: 'number' }).notNull(),
     notes: text('notes'),
 
-    // Basic job app fields
+    // job fields – company + role + current status snapshot
     company: text('company').notNull(),
     role: text('role').notNull(),
-    status: text('status').notNull(), // current status snapshot (details live in logs)
+    status: text('status').notNull(), // latest status (history in logs table)
 
     createdAt: integer('created_at', { mode: 'number' }).notNull(),
   },
@@ -37,6 +36,7 @@ export const applications = sqliteTable(
   }),
 );
 
+// table – status changes over time (one app has many rows)
 export const applicationStatusLogs = sqliteTable(
   'application_status_logs',
   {
@@ -51,17 +51,18 @@ export const applicationStatusLogs = sqliteTable(
   }),
 );
 
+// table – weekly / monthly goals (global or tied to one category)
 export const targets = sqliteTable(
   'targets',
   {
     id: integer('id', { mode: 'number' }).primaryKey({ autoIncrement: true }),
 
-    // "global" targets use categoryId = null
+    // scope – global row uses category id null
     scope: text('scope').notNull(), // "global" | "category"
     categoryId: integer('category_id', { mode: 'number' }),
 
     periodType: text('period_type').notNull(), // "week" | "month"
-    periodStart: text('period_start').notNull(), // ISO date (YYYY-MM-DD)
+    periodStart: text('period_start').notNull(), // iso yyyy-mm-dd (period anchor)
     goalCount: integer('goal_count', { mode: 'number' }).notNull(),
 
     createdAt: integer('created_at', { mode: 'number' }).notNull(),
@@ -70,4 +71,3 @@ export const targets = sqliteTable(
     categoryFk: foreignKey({ columns: [t.categoryId], foreignColumns: [categories.id] }),
   }),
 );
-

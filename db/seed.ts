@@ -1,3 +1,6 @@
+// seed – insert demo rows once if all core tables are empty (safe re-run)
+
+// imports
 import { count } from 'drizzle-orm';
 
 import { db } from '@/db/client';
@@ -8,13 +11,9 @@ import {
   targets,
 } from '@/db/schema';
 
-/**
- * References:
- * - Drizzle transactions: https://orm.drizzle.team/docs/transactions
- * - Drizzle inserts/selects: https://orm.drizzle.team/docs/insert
- * - expo-sqlite docs: https://docs.expo.dev/versions/latest/sdk/sqlite/
- */
+// function – idempotent seed for markers / screenshots / charts later
 export async function seedDb(): Promise<void> {
+  // helper – total row count across the four core tables
   const sumCounts = async () => {
     const c1 = (await db.select({ c: count() }).from(categories))[0]?.c ?? 0;
     const c2 = (await db.select({ c: count() }).from(applications))[0]?.c ?? 0;
@@ -23,11 +22,14 @@ export async function seedDb(): Promise<void> {
     return c1 + c2 + c3 + c4;
   };
 
+  // guard – skip if user already has any data (avoid dup demo)
   if ((await sumCounts()) > 0) return;
 
   const now = Date.now();
 
+  // transaction – all-or-nothing insert block
   await db.transaction(async (tx) => {
+    // inner guard – race-safe if two seeds start together
     const sumCountsTx = async () => {
       const c1 = (await tx.select({ c: count() }).from(categories))[0]?.c ?? 0;
       const c2 = (await tx.select({ c: count() }).from(applications))[0]?.c ?? 0;
@@ -37,6 +39,7 @@ export async function seedDb(): Promise<void> {
     };
 
     if ((await sumCountsTx()) > 0) return;
+    // insert – demo categories first (apps need their ids)
     const insertedCategories = await tx
       .insert(categories)
       .values([
@@ -46,14 +49,17 @@ export async function seedDb(): Promise<void> {
       ])
       .returning({ id: categories.id, name: categories.name });
 
+    // map – look up category id by human-readable name
     const catByName = Object.fromEntries(insertedCategories.map((c) => [c.name, c.id])) as Record<
       string,
       number
     >;
 
-    const weekStart = '2026-04-21'; // Monday (local coursework demo anchor)
+    // constants – demo week / month anchors for targets
+    const weekStart = '2026-04-21'; // monday anchor for coursework demo
     const monthStart = '2026-04-01';
 
+    // insert – three sample applications linked to categories
     await tx.insert(applications).values([
       {
         company: 'Riverbank Analytics',
@@ -87,6 +93,7 @@ export async function seedDb(): Promise<void> {
       },
     ]);
 
+    // query – grab ids so logs can point at the right application rows
     const apps = await tx
       .select({
         id: applications.id,
@@ -99,8 +106,8 @@ export async function seedDb(): Promise<void> {
       number
     >;
 
+    // insert – fake timelines for charts / history screens later
     await tx.insert(applicationStatusLogs).values([
-      // Riverbank timeline
       {
         applicationId: appIdByCompany['Riverbank Analytics']!,
         status: 'Applied',
@@ -120,7 +127,6 @@ export async function seedDb(): Promise<void> {
         createdAt: now - 1000 * 60 * 60 * 24 * 1,
       },
 
-      // Northwind timeline
       {
         applicationId: appIdByCompany['Northwind Retail']!,
         status: 'Applied',
@@ -134,7 +140,6 @@ export async function seedDb(): Promise<void> {
         createdAt: now - 1000 * 60 * 60 * 24 * 10,
       },
 
-      // Harbour timeline
       {
         applicationId: appIdByCompany['Harbour Health']!,
         status: 'Applied',
@@ -155,6 +160,7 @@ export async function seedDb(): Promise<void> {
       },
     ]);
 
+    // insert – sample targets (global + per category)
     await tx.insert(targets).values([
       {
         scope: 'global',
@@ -191,4 +197,3 @@ export async function seedDb(): Promise<void> {
     ]);
   });
 }
-

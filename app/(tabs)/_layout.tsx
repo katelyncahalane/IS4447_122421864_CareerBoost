@@ -1,3 +1,6 @@
+// tabs layout – bottom tab bar for main app section
+
+// imports
 import { Tabs } from 'expo-router';
 import React from 'react';
 
@@ -6,9 +9,11 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
+// screen – single applications tab for now (keep coursework simple)
 export default function TabLayout() {
   const colorScheme = useColorScheme();
 
+  // render
   return (
     <Tabs
       screenOptions={{

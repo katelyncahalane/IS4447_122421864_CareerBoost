@@ -1,13 +1,18 @@
+// themed text – text colour follows light / dark theme
+
+// imports
 import { StyleSheet, Text, type TextProps } from 'react-native';
 
 import { useThemeColor } from '@/hooks/use-theme-color';
 
+// types – allow override colours + typography preset
 export type ThemedTextProps = TextProps & {
   lightColor?: string;
   darkColor?: string;
   type?: 'default' | 'title' | 'defaultSemiBold' | 'subtitle' | 'link';
 };
 
+// component
 export function ThemedText({
   style,
   lightColor,
@@ -17,6 +22,7 @@ export function ThemedText({
 }: ThemedTextProps) {
   const color = useThemeColor({ light: lightColor, dark: darkColor }, 'text');
 
+  // render – pick style variant by type prop
   return (
     <Text
       style={[
@@ -33,6 +39,7 @@ export function ThemedText({
   );
 }
 
+// styles – typography presets
 const styles = StyleSheet.create({
   default: {
     fontSize: 16,

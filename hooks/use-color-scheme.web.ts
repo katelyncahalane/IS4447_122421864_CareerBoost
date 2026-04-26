@@ -1,12 +1,14 @@
+// colour scheme (web) – avoid wrong colour before client hydration
+
+// imports
 import { useEffect, useState } from 'react';
 import { useColorScheme as useRNColorScheme } from 'react-native';
 
-/**
- * To support static rendering, this value needs to be re-calculated on the client side for web
- */
+// hook – force light until mounted then follow system
 export function useColorScheme() {
   const [hasHydrated, setHasHydrated] = useState(false);
 
+  // effect – flip flag after first paint on web
   useEffect(() => {
     setHasHydrated(true);
   }, []);

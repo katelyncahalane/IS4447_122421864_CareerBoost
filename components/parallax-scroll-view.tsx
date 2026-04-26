@@ -1,3 +1,6 @@
+// parallax scroll – header image moves as user scrolls (template demo)
+
+// imports
 import type { PropsWithChildren, ReactElement } from 'react';
 import { StyleSheet } from 'react-native';
 import Animated, {
@@ -11,13 +14,16 @@ import { ThemedView } from '@/components/themed-view';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useThemeColor } from '@/hooks/use-theme-color';
 
+// constant – header height used in interpolation math
 const HEADER_HEIGHT = 250;
 
+// types – pass header image + two background colours
 type Props = PropsWithChildren<{
   headerImage: ReactElement;
   headerBackgroundColor: { dark: string; light: string };
 }>;
 
+// component
 export default function ParallaxScrollView({
   children,
   headerImage,
@@ -27,6 +33,8 @@ export default function ParallaxScrollView({
   const colorScheme = useColorScheme() ?? 'light';
   const scrollRef = useAnimatedRef<Animated.ScrollView>();
   const scrollOffset = useScrollOffset(scrollRef);
+
+  // animated style – move + scale header based on scroll position
   const headerAnimatedStyle = useAnimatedStyle(() => {
     return {
       transform: [
@@ -44,6 +52,7 @@ export default function ParallaxScrollView({
     };
   });
 
+  // render
   return (
     <Animated.ScrollView
       ref={scrollRef}
@@ -62,6 +71,7 @@ export default function ParallaxScrollView({
   );
 }
 
+// styles
 const styles = StyleSheet.create({
   container: {
     flex: 1,
