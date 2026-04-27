@@ -1,4 +1,5 @@
-// insights – bucket counts from stored application dates only (rubric: no fake network data)
+// Insights helpers — **inputs must come only from SQLite rows** (via Drizzle), e.g. `appliedDate`, `metricValue`,
+// `status`, `categoryName` read in the Insights screen. No fabricated counts: aggregations operate on those arrays only.
 
 export type InsightPeriod = 'day' | 'week' | 'month';
 
@@ -129,6 +130,65 @@ export function aggregateApplicationsByPeriod(
 
 export function maxBucketCount(buckets: readonly InsightBucket[]): number {
   return buckets.reduce((m, b) => Math.max(m, b.count), 0);
+}
+
+/** Same bucket key as `aggregateApplicationsByPeriod` uses (`sortKey`). */
+export function bucketKeyForAppliedDate(iso: string, period: InsightPeriod): string | null {
+  const t = iso.trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(t)) return null;
+  if (period === 'day') return t;
+  if (period === 'week') return mondayKeyFromIsoDate(t);
+  return monthKeyFromIsoDate(t);
+}
+
+export type MeanMetricBucket = { label: string; sortKey: string; mean: number; count: number };
+
+/** Per time bucket: mean primary metric among applications in that bucket (same window as count charts). */
+export function aggregateMeanMetricByBuckets(
+  rows: readonly { appliedDate: string; metricValue: number }[],
+  period: InsightPeriod,
+  now: Date = new Date(),
+): MeanMetricBucket[] {
+  const base = aggregateApplicationsByPeriod(
+    rows.map((r) => r.appliedDate),
+    period,
+    now,
+  );
+  return base.map((b) => {
+    const inB = rows.filter((r) => {
+      if (!isAppliedDateInInsightWindow(r.appliedDate, period, now)) return false;
+      const k = bucketKeyForAppliedDate(r.appliedDate, period);
+      return k === b.sortKey;
+    });
+    const n = inB.length;
+    const mean = n > 0 ? Math.round((inB.reduce((s, r) => s + r.metricValue, 0) / n) * 10) / 10 : 0;
+    return { label: b.label, sortKey: b.sortKey, mean, count: n };
+  });
+}
+
+export type PeakBucket = { label: string; count: number; sortKey: string };
+
+/** Busiest bucket in the window (ties broken by later `sortKey`). */
+export function peakBucket(buckets: readonly InsightBucket[]): PeakBucket | null {
+  let best: InsightBucket | null = null;
+  for (const b of buckets) {
+    if (b.count === 0) continue;
+    if (!best || b.count > best.count || (b.count === best.count && b.sortKey > best.sortKey)) {
+      best = b;
+    }
+  }
+  return best ? { label: best.label, count: best.count, sortKey: best.sortKey } : null;
+}
+
+export type WindowMomentum = { firstTotal: number; secondTotal: number };
+
+/** Splits the timeline in half and sums application counts (simple “front vs back” of the window). */
+export function windowMomentum(buckets: readonly InsightBucket[]): WindowMomentum | null {
+  if (buckets.length < 2) return null;
+  const mid = Math.floor(buckets.length / 2);
+  const firstTotal = buckets.slice(0, mid).reduce((s, b) => s + b.count, 0);
+  const secondTotal = buckets.slice(mid).reduce((s, b) => s + b.count, 0);
+  return { firstTotal, secondTotal };
 }
 
 /** Distinct high-contrast colours for charts (WCAG-friendly on white / dark grey). */

@@ -1,4 +1,4 @@
-// categories tab – coursework requirement: list categories (name, colour, icon); tap to edit, add for create.
+// categories tab – list categories (name, colour, icon); add/edit stack screens; every application record references one category.
 
 // imports
 import { useCallback, useEffect, useState } from 'react';
@@ -15,10 +15,9 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { EmptyStateCard } from '@/components/ui/empty-state-card';
 import { HeroBanner } from '@/components/ui/hero-banner';
-import { Colors } from '@/constants/theme';
 import { db } from '@/db/client';
 import { categories } from '@/db/schema';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useThemePalette } from '@/hooks/use-theme-palette';
 import { cardShadowStyle } from '@/lib/card-shadow';
 import { asc } from 'drizzle-orm';
 import { useFocusEffect } from '@react-navigation/native';
@@ -30,8 +29,7 @@ type CategoryRow = { id: number; name: string; color: string; icon: string };
 
 // screen
 export default function CategoriesScreen() {
-  const colorScheme = useColorScheme() ?? 'light';
-  const palette = Colors[colorScheme];
+  const palette = useThemePalette();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [rows, setRows] = useState<CategoryRow[]>([]);
@@ -83,18 +81,17 @@ export default function CategoriesScreen() {
   return (
     <ThemedView style={styles.flex}>
       <HeroBanner
-        colorScheme={colorScheme}
         eyebrow="CareerBoost · organise"
         title="Categories"
-        tagline="Group applications by track—each category has its own colour and icon."
+        tagline="Define tracks with a name, colour, and icon label. Every tracker record must reference a category."
       />
       <View style={styles.header}>
         <ThemedText style={[styles.hint, { color: palette.icon }]}>
-          Name, colour & icon on each row
+          Create and edit categories — records always pick one
         </ThemedText>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Add new category"
+          accessibilityLabel="Add category with name colour and icon"
           // cast: typed routes file may lag until expo regenerates paths; route is valid at runtime
           onPress={() => router.push('/add-category' as unknown as Href)}
           style={({ pressed }) => [
@@ -114,7 +111,7 @@ export default function CategoriesScreen() {
           <EmptyStateCard
             icon="pricetags-outline"
             title="No categories yet"
-            message="Tap Add to create your first category. You will use it when logging applications."
+            message="Tap Add to set a name, colour, and icon label. You will assign one category to every new record on the tracker."
             tint={palette.tint}
             surface={palette.surfaceCard}
             border={palette.borderSubtle}
@@ -127,8 +124,8 @@ export default function CategoriesScreen() {
         renderItem={({ item }) => (
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={`Edit category ${item.name}`}
-            accessibilityHint="Opens the edit screen for this category"
+            accessibilityLabel={`Edit category ${item.name}, colour ${item.color}, icon ${item.icon}`}
+            accessibilityHint="Change name colour or icon. Delete only works when no records use this category."
             onPress={() =>
               router.push({
                 pathname: '/edit-category',

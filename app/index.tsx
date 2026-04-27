@@ -4,8 +4,7 @@
 import { ActivityIndicator, StyleSheet } from 'react-native';
 
 import { ThemedView } from '@/components/themed-view';
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useThemePalette } from '@/hooks/use-theme-palette';
 import { getSession } from '@/lib/session';
 import { useRouter } from 'expo-router';
 import { useEffect } from 'react';
@@ -13,8 +12,7 @@ import { useEffect } from 'react';
 // screen – tiny gate; no heavy work here (db runs in root layout)
 export default function Index() {
   const router = useRouter();
-  const colorScheme = useColorScheme() ?? 'light';
-  const palette = Colors[colorScheme];
+  const palette = useThemePalette();
 
   // effect – read asyncstorage once then replace route
   useEffect(() => {

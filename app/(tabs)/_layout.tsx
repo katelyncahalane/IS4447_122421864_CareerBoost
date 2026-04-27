@@ -6,15 +6,11 @@ import React from 'react';
 
 import { HapticTab } from '@/components/haptic-tab';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useThemePalette } from '@/hooks/use-theme-palette';
 
 // screen – bottom tabs: applications, categories, targets, insights (rubric + charts).
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
-
-  const scheme = colorScheme ?? 'light';
-  const tabPalette = Colors[scheme];
+  const tabPalette = useThemePalette();
 
   // render
   return (
@@ -36,6 +32,7 @@ export default function TabLayout() {
         options={{
           title: 'Tracker',
           headerShown: true,
+          tabBarAccessibilityLabel: 'Tracker tab. Job applications list and filters.',
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="doc.text.fill" color={color} />,
         }}
       />
@@ -44,6 +41,7 @@ export default function TabLayout() {
         options={{
           title: 'Categories',
           headerShown: true,
+          tabBarAccessibilityLabel: 'Categories tab. Create and edit application categories.',
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="folder.fill" color={color} />,
         }}
       />
@@ -52,6 +50,7 @@ export default function TabLayout() {
         options={{
           title: 'Targets',
           headerShown: true,
+          tabBarAccessibilityLabel: 'Targets tab. Weekly and monthly application goals.',
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="chart.bar.fill" color={color} />,
         }}
       />
@@ -60,6 +59,7 @@ export default function TabLayout() {
         options={{
           title: 'Insights',
           headerShown: true,
+          tabBarAccessibilityLabel: 'Insights tab. Charts from your saved applications.',
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="chart.xyaxis.line" color={color} />,
         }}
       />

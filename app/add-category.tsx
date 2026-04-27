@@ -1,4 +1,4 @@
-// add category – insert into `categories` (name, colour hex, icon string). Icon is a short label for your own UI (not expo vector names).
+// add category – insert into `categories` (name, colour hex, icon label). Records on the tracker must pick a category.
 
 // imports
 import { useMemo, useState } from 'react';
@@ -7,25 +7,19 @@ import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import FormField from '@/components/ui/form-field';
-import { Colors } from '@/constants/theme';
 import { db } from '@/db/client';
 import { categories } from '@/db/schema';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useThemePalette } from '@/hooks/use-theme-palette';
+import { validateCategoryForm } from '@/lib/validate-category-form';
 import { Stack, useRouter } from 'expo-router';
 
 // constants – simple preset palette (good contrast on white cards)
 const PRESET_COLOURS = ['#2563eb', '#16a34a', '#a855f7', '#dc2626', '#ea580c', '#0891b2'] as const;
 
-// helpers
-function isHexColour(v: string): boolean {
-  return /^#[0-9A-Fa-f]{6}$/.test(v.trim());
-}
-
 // screen
 export default function AddCategoryScreen() {
   const router = useRouter();
-  const colorScheme = useColorScheme() ?? 'light';
-  const palette = Colors[colorScheme];
+  const palette = useThemePalette();
 
   const [name, setName] = useState('');
   const [color, setColor] = useState<string>(PRESET_COLOURS[0]);
@@ -35,20 +29,14 @@ export default function AddCategoryScreen() {
   // true when the hex field matches one of the chips (hint text only)
   const selectedPreset = useMemo(() => PRESET_COLOURS.find((c) => c === color) ?? null, [color]);
 
-  // validate inline; sqlite errors still use Alert
   const onSave = async () => {
-    const n = name.trim();
-    const ic = icon.trim();
-    const col = color.trim();
-    const next: typeof fieldErrors = {};
-    if (!n) next.name = 'Name is required.';
-    if (!ic) next.icon = 'Short icon label is required (e.g. code, chart).';
-    if (!isHexColour(col)) next.color = 'Use hex format like #2563eb.';
-    if (Object.keys(next).length) {
-      setFieldErrors(next);
+    const check = validateCategoryForm({ name, color, icon });
+    if (!check.ok) {
+      setFieldErrors(check.errors);
       return;
     }
     setFieldErrors({});
+    const { name: n, color: col, icon: ic } = check.values;
     try {
       await db.insert(categories).values({
         name: n,
@@ -67,8 +55,18 @@ export default function AddCategoryScreen() {
     <ThemedView style={styles.flex}>
       <Stack.Screen options={{ title: 'Add category' }} />
       <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
+        <View style={[styles.storyCard, { borderColor: palette.borderSubtle, backgroundColor: palette.surfaceMuted }]}>
+          <ThemedText type="defaultSemiBold">What a category is</ThemedText>
+          <ThemedText style={[styles.storyLead, { color: palette.icon }]}>
+            Each category has a name, a colour for chips and list accents, and a short icon label (plain text for lists
+            and CSV). Every tracker record must reference a category — add categories here first when you need a new
+            group.
+          </ThemedText>
+        </View>
+
         <FormField
           label="Name"
+          hint="Required. Shown wherever this category is listed (e.g. Software Engineering)."
           value={name}
           onChangeText={(v) => {
             setName(v);
@@ -81,7 +79,9 @@ export default function AddCategoryScreen() {
 
         <View style={styles.block}>
           <ThemedText type="defaultSemiBold">Colour</ThemedText>
-          <ThemedText style={styles.hint}>Tap a swatch or type a hex value below.</ThemedText>
+          <ThemedText style={[styles.hint, { color: palette.icon }]}>
+            Required. Tap a swatch or type a full six-digit hex value — used on the tracker and category list.
+          </ThemedText>
           <View style={styles.swatches} accessibilityRole="radiogroup" accessibilityLabel="Category colour">
             {PRESET_COLOURS.map((c) => {
               const on = c === color;
@@ -107,6 +107,7 @@ export default function AddCategoryScreen() {
           </View>
           <FormField
             label="Hex colour (#RRGGBB)"
+            hint="Must be exactly six hex digits after #."
             value={color}
             onChangeText={(v) => {
               setColor(v);
@@ -123,6 +124,7 @@ export default function AddCategoryScreen() {
 
         <FormField
           label="Icon label"
+          hint="Required. One short word or token — not an image file; used in the category list and exports."
           value={icon}
           onChangeText={(v) => {
             setIcon(v);
@@ -136,7 +138,7 @@ export default function AddCategoryScreen() {
         <View style={styles.actions}>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Save category"
+            accessibilityLabel="Save new category"
             onPress={() => void onSave()}
             style={({ pressed }) => [
               styles.primary,
@@ -161,8 +163,10 @@ export default function AddCategoryScreen() {
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   body: { padding: 16, gap: 16, paddingBottom: 32 },
+  storyCard: { borderWidth: 1, borderRadius: 12, padding: 12, gap: 8 },
+  storyLead: { fontSize: 14, lineHeight: 20, fontWeight: '500' },
   block: { gap: 8 },
-  hint: { opacity: 0.8, fontSize: 14 },
+  hint: { fontSize: 14, lineHeight: 19, fontWeight: '500' },
   swatches: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   swatchOuter: {
     padding: 3,

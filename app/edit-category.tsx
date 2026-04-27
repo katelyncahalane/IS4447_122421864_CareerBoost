@@ -1,4 +1,4 @@
-// edit category – update row in `categories`; delete blocked if any `applications` still reference this category (foreign key safety).
+// edit category – update `categories` (name, colour, icon). Delete only when no records reference this category (FK).
 
 // imports
 import { useEffect, useMemo, useState } from 'react';
@@ -7,20 +7,16 @@ import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, View } fro
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import FormField from '@/components/ui/form-field';
-import { Colors } from '@/constants/theme';
 import { db } from '@/db/client';
 import { applications, categories } from '@/db/schema';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useThemePalette } from '@/hooks/use-theme-palette';
+import { validateCategoryForm } from '@/lib/validate-category-form';
 import { count, eq } from 'drizzle-orm';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 
 // constants
 const PRESET_COLOURS = ['#2563eb', '#16a34a', '#a855f7', '#dc2626', '#ea580c', '#0891b2'] as const;
-
-// helpers
-function isHexColour(v: string): boolean {
-  return /^#[0-9A-Fa-f]{6}$/.test(v.trim());
-}
 
 // screen
 export default function EditCategoryScreen() {
@@ -29,7 +25,7 @@ export default function EditCategoryScreen() {
   const id = Number.parseInt(params.id ?? '', 10);
 
   const colorScheme = useColorScheme() ?? 'light';
-  const palette = Colors[colorScheme];
+  const palette = useThemePalette();
 
   const [loading, setLoading] = useState(true);
   const [name, setName] = useState('');
@@ -72,18 +68,13 @@ export default function EditCategoryScreen() {
 
   // handler – save updates
   const onSave = async () => {
-    const n = name.trim();
-    const ic = icon.trim();
-    const col = color.trim();
-    const next: typeof fieldErrors = {};
-    if (!n) next.name = 'Name is required.';
-    if (!ic) next.icon = 'Short icon label is required.';
-    if (!isHexColour(col)) next.color = 'Use hex format like #2563eb.';
-    if (Object.keys(next).length) {
-      setFieldErrors(next);
+    const check = validateCategoryForm({ name, color, icon });
+    if (!check.ok) {
+      setFieldErrors(check.errors);
       return;
     }
     setFieldErrors({});
+    const { name: n, color: col, icon: ic } = check.values;
     try {
       await db
         .update(categories)
@@ -95,9 +86,12 @@ export default function EditCategoryScreen() {
     }
   };
 
-  // delete – confirm first; refuse if applications.category_id points here (would break FKs)
+  // delete – confirm first; refuse if any application row still references this category (FK + rubric)
   const onDelete = () => {
-    Alert.alert('Delete category?', 'You cannot undo this.', [
+    Alert.alert(
+      'Delete this category?',
+      'You can only remove a category when no saved records point to it. Every record must keep a category reference.',
+      [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Delete',
@@ -110,7 +104,7 @@ export default function EditCategoryScreen() {
             if (used > 0) {
               Alert.alert(
                 'Cannot delete',
-                `This category is used by ${used} application(s). Reassign or delete those first.`,
+                `This category is still referenced by ${used} saved record${used === 1 ? '' : 's'}. Edit each record to pick another category (or delete the record), then try again.`,
               );
               return;
             }
@@ -138,8 +132,17 @@ export default function EditCategoryScreen() {
     <ThemedView style={styles.flex}>
       <Stack.Screen options={{ title: 'Edit category' }} />
       <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
+        <View style={[styles.storyCard, { borderColor: palette.borderSubtle, backgroundColor: palette.surfaceMuted }]}>
+          <ThemedText type="defaultSemiBold">Editing categories</ThemedText>
+          <ThemedText style={[styles.storyLead, { color: palette.icon }]}>
+            Name, colour, and icon label stay in SQLite and show on every record that references this category. You
+            cannot delete a category while any record still uses it — reassign records on the tracker first.
+          </ThemedText>
+        </View>
+
         <FormField
           label="Name"
+          hint="Required. Updates everywhere this category appears."
           value={name}
           onChangeText={(v) => {
             setName(v);
@@ -152,7 +155,9 @@ export default function EditCategoryScreen() {
 
         <View style={styles.block}>
           <ThemedText type="defaultSemiBold">Colour</ThemedText>
-          <ThemedText style={styles.hint}>Tap a swatch or type a hex value.</ThemedText>
+          <ThemedText style={[styles.hint, { color: palette.icon }]}>
+            Required. Swatch or six-digit hex — updates list accents and tracker chips for linked records.
+          </ThemedText>
           <View style={styles.swatches} accessibilityRole="radiogroup" accessibilityLabel="Category colour">
             {PRESET_COLOURS.map((c) => {
               const on = c === color;
@@ -177,6 +182,7 @@ export default function EditCategoryScreen() {
           </View>
           <FormField
             label="Hex colour (#RRGGBB)"
+            hint="Must be exactly six hex digits after #."
             value={color}
             onChangeText={(v) => {
               setColor(v);
@@ -191,6 +197,7 @@ export default function EditCategoryScreen() {
 
         <FormField
           label="Icon label"
+          hint="Required. Short text token for lists and exports (not an image asset)."
           value={icon}
           onChangeText={(v) => {
             setIcon(v);
@@ -204,7 +211,7 @@ export default function EditCategoryScreen() {
         <View style={styles.actions}>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Save changes"
+            accessibilityLabel="Save category changes"
             onPress={() => void onSave()}
             style={({ pressed }) => [
               styles.primary,
@@ -214,7 +221,7 @@ export default function EditCategoryScreen() {
           </Pressable>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Delete category"
+            accessibilityLabel="Delete category if unused"
             onPress={onDelete}
             style={({ pressed }) => [styles.danger, { opacity: pressed ? 0.85 : 1 }]}>
             <ThemedText style={styles.dangerLabel}>Delete</ThemedText>
@@ -238,8 +245,10 @@ const styles = StyleSheet.create({
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 10 },
   muted: { opacity: 0.85 },
   body: { padding: 16, gap: 16, paddingBottom: 32 },
+  storyCard: { borderWidth: 1, borderRadius: 12, padding: 12, gap: 8 },
+  storyLead: { fontSize: 14, lineHeight: 20, fontWeight: '500' },
   block: { gap: 8 },
-  hint: { opacity: 0.8, fontSize: 14 },
+  hint: { fontSize: 14, lineHeight: 19, fontWeight: '500' },
   swatches: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   swatchOuter: { padding: 3, borderRadius: 999, borderWidth: 2 },
   swatchInner: { width: 36, height: 36, borderRadius: 18 },

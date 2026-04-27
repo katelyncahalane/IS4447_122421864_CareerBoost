@@ -1,19 +1,33 @@
-// component test – formfield shows label / placeholder and calls onchangetext
+// Component tests — reusable FormField: label, placeholder, optional hint, simulated input → onChangeText.
 
-// imports
 import React from 'react';
-import { render, fireEvent } from '@testing-library/react-native';
+import { fireEvent, render } from '@testing-library/react-native';
 
 import FormField from '@/components/ui/form-field';
 
-// mock – pin colour scheme so output is stable in tests
 jest.mock('@/hooks/use-color-scheme', () => ({
   useColorScheme: () => 'light',
 }));
 
-// tests
-describe('FormField', () => {
-  it('renders label + placeholder and fires onChangeText', () => {
+// ThemedText → useThemeColor → useThemeControls; stub context so theme-preference (AsyncStorage) is not loaded.
+jest.mock('@/contexts/app-color-scheme', () => ({
+  useThemeControls: () => ({
+    followsSystem: true,
+    highContrast: false,
+    toggleColorScheme: jest.fn(),
+    toggleHighContrast: jest.fn(),
+    resetToSystemTheme: jest.fn(async () => {}),
+    resetHighContrastPreference: jest.fn(async () => {}),
+  }),
+}));
+
+jest.mock('@/hooks/use-theme-palette', () => {
+  const { Colors } = jest.requireActual('@/constants/theme') as typeof import('@/constants/theme');
+  return { useThemePalette: () => Colors.light };
+});
+
+describe('FormField (component)', () => {
+  it('renders the provided label and placeholder, and fires onChangeText when input is simulated', () => {
     const onChangeText = jest.fn();
 
     const screen = render(
@@ -27,9 +41,24 @@ describe('FormField', () => {
 
     expect(screen.getByText('Company')).toBeTruthy();
     const input = screen.getByPlaceholderText('e.g. Northwind Retail');
+    expect(screen.getByLabelText('Company')).toBe(input);
 
     fireEvent.changeText(input, 'Acme Inc');
+    expect(onChangeText).toHaveBeenCalledTimes(1);
     expect(onChangeText).toHaveBeenCalledWith('Acme Inc');
+  });
+
+  it('renders optional hint text under the label', () => {
+    const screen = render(
+      <FormField
+        label="Primary metric"
+        hint="Enter a positive whole number."
+        value=""
+        onChangeText={jest.fn()}
+        placeholder="30"
+      />,
+    );
+    expect(screen.getByText('Enter a positive whole number.')).toBeTruthy();
   });
 
   it('shows error text when errorText is set', () => {

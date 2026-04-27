@@ -1,4 +1,5 @@
-// shared validation – add / edit job application (date, metric, category, notes optional)
+// Shared validation for primary application records: **date**, **measurable metric**, and **category** are required
+// (matches `applications` NOT NULL columns). Notes optional. All validated before Drizzle writes to SQLite.
 
 // types – raw form strings before save
 export type ApplicationFormInput = {
@@ -43,11 +44,12 @@ export function validateApplicationForm(input: ApplicationFormInput):
 
   const metricValue = Number.parseInt(metricRaw, 10);
   if (!Number.isFinite(metricValue) || metricValue <= 0) {
-    errors.metricValue = 'Enter a positive whole number.';
+    errors.metricValue =
+      'Primary metric: enter a positive whole number (e.g. minutes or hours for duration, or a count).';
   }
 
   if (input.categoryId == null) {
-    errors.category = 'Pick a category.';
+    errors.category = 'Category is required — choose one to group this record.';
   }
 
   if (Object.keys(errors).length > 0) {

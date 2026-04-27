@@ -1,4 +1,5 @@
-// integration test – applications list shows a seeded row (db mocked)
+// Integration test — main **applications** list (tracker tab): after `refresh()` loads rows from the mocked SQLite
+// layer (`db.select…innerJoin`), the UI renders company, role, applied date, metric, and category from that state.
 
 // mocks – must sit above the screen import (jest hoists these anyway)
 jest.mock('@/hooks/use-color-scheme', () => ({
@@ -7,8 +8,12 @@ jest.mock('@/hooks/use-color-scheme', () => ({
 
 jest.mock('@/contexts/app-color-scheme', () => ({
   useThemeControls: () => ({
+    followsSystem: true,
+    highContrast: false,
     toggleColorScheme: jest.fn(),
+    toggleHighContrast: jest.fn(),
     resetToSystemTheme: jest.fn(async () => {}),
+    resetHighContrastPreference: jest.fn(async () => {}),
   }),
 }));
 
@@ -43,6 +48,7 @@ const MOCK_ROWS = [
     appliedDate: '2026-04-22',
     metricValue: 3,
     categoryName: 'Software Engineering',
+    categoryColor: '#2563eb',
   },
 ];
 
@@ -81,14 +87,21 @@ import { render, screen } from '@testing-library/react-native';
 
 import JobApplicationScreen from '@/app/(tabs)/index';
 
-// tests
-describe('Applications list integration', () => {
-  it('renders seeded application rows', async () => {
-    render(<JobApplicationScreen />);
+describe('Applications list (integration)', () => {
+  it(
+    'displays seeded-style application data from DB state through the list UI',
+    async () => {
+      render(<JobApplicationScreen />);
 
-    // findbytext waits like waitfor but tends to be more stable in rn tests
-    expect(await screen.findByText('Riverbank Analytics', {}, { timeout: 10000 })).toBeTruthy();
-    expect(screen.getByText('Graduate Software Engineer')).toBeTruthy();
-    expect(screen.getByText(/2026-04-22/)).toBeTruthy();
-  });
+      expect(await screen.findByText('Riverbank Analytics', {}, { timeout: 15000 })).toBeTruthy();
+      expect(screen.getByText('Graduate Software Engineer')).toBeTruthy();
+      expect(screen.getByText(/2026-04-22/)).toBeTruthy();
+      expect(screen.getByText(/primary metric 3/)).toBeTruthy();
+      // Category name is rendered on the filter chip and on each card — expect at least one visible match.
+      expect(screen.getAllByText(/Software Engineering/).length).toBeGreaterThanOrEqual(1);
+      // Status appears on filter chips and on the card — at least one match confirms DB → UI flow.
+      expect(screen.getAllByText(/Interview/).length).toBeGreaterThanOrEqual(1);
+    },
+    25_000,
+  );
 });

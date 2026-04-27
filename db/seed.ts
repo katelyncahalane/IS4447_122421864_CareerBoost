@@ -1,10 +1,18 @@
 /**
  * Single seed entrypoint for CareerBoost (`seedDb`).
- * Populates ALL coursework tables in one transaction when the DB is empty:
- *   categories → applications → application_status_logs → targets
- * Each application has: applied_date, metric_value, category_id, optional notes, current status;
- * logs show status changes over time; targets are weekly/monthly (global + per-category).
- * Idempotent: if any row exists in those four tables, the whole seed is skipped (no duplicates).
+ *
+ * **Persistence:** runs only after Drizzle migrations succeed (`useMigrations` in `app/_layout.tsx`). Writes through
+ * the same `db` / transaction API the app uses for normal CRUD.
+ *
+ * Populates **core tracker tables** when the combined row count across them is zero (idempotent — never duplicates):
+ * `categories` → `applications` → `application_status_logs` → `targets`.
+ * The `users` table is **not** seeded here (accounts come from Register / Login).
+ *
+ * Sample volume is intentionally large: dense **last 14 days**, spread across **weeks** and **months**, multiple
+ * **statuses** and **categories**, varied **metric_value**, and **notes** on many rows — so Insights (daily / weekly /
+ * monthly bars, line, donut, strips) and Targets (met / exceeded / unmet) always have material to render on first launch.
+ *
+ * @see SEED_EXPECTED_APPLICATIONS_MIN — used by tests to guard minimum demo depth.
  */
 
 // imports
@@ -17,6 +25,10 @@ import {
   categories,
   targets,
 } from '@/db/schema';
+import { statusTimelineForLatest } from '@/lib/application-statuses';
+
+/** Minimum application rows expected after a first-time seed (raise when adding more demo data). */
+export const SEED_EXPECTED_APPLICATIONS_MIN = 45;
 
 /** yyyy-mm-dd from local calendar parts */
 function toIsoDate(d: Date): string {
@@ -41,6 +53,19 @@ function mondayStartIso(now: Date): string {
   const diff = day === 0 ? -6 : 1 - day;
   d.setDate(d.getDate() + diff);
   return toIsoDate(d);
+}
+
+/** Shift an ISO calendar date by whole days */
+function addDaysIso(iso: string, deltaDays: number): string {
+  const [y, m, d] = iso.split('-').map(Number);
+  const dt = new Date(y, m - 1, d + deltaDays);
+  return toIsoDate(dt);
+}
+
+/** First day of the calendar month before `yyyy-mm-01` */
+function previousMonthFirstIso(monthStartIso: string): string {
+  const [y, m] = monthStartIso.split('-').map(Number);
+  return toIsoDate(new Date(y, m - 2, 1));
 }
 
 // function – idempotent seed for markers / screenshots / charts later
@@ -90,9 +115,11 @@ export async function seedDb(): Promise<void> {
       number
     >;
 
-    // anchors – current week/month for targets + “in-window” insights
+    // anchors – current + prior week/month for targets and streak-friendly history
     const weekStart = mondayStartIso(now);
     const monthStart = monthStartIso(now);
+    const prevWeekStart = addDaysIso(weekStart, -7);
+    const prevMonthStart = previousMonthFirstIso(monthStart);
 
     const statuses = ['Applied', 'Screening', 'Interview', 'Offer', 'Rejected', 'Withdrawn'] as const;
     const catCycle = [
@@ -184,6 +211,25 @@ export async function seedDb(): Promise<void> {
       });
     }
 
+    // Current ISO week — extra cluster (Offer / Interview mix, higher metrics) so weekly Insights + Targets pop
+    const weekAccentStatuses = ['Offer', 'Interview', 'Screening', 'Applied', 'Offer'] as const;
+    for (let di = 0; di < 5; di++) {
+      const iso = addDaysIso(weekStart, di);
+      const idx = 400 + di;
+      const catName = catCycle[idx % catCycle.length]!;
+      const companyBase = pretendCompanies[(idx + 4) % pretendCompanies.length]!;
+      appRows.push({
+        company: `${companyBase} · Week+${di}`,
+        role: 'Placement Engineer',
+        appliedDate: iso,
+        metricValue: 8 + (di % 4),
+        categoryId: catByName[catName]!,
+        notes: 'Seed: current-week accent for charts and target progress.',
+        status: weekAccentStatuses[di % weekAccentStatuses.length]!,
+        createdAt: nowMs,
+      });
+    }
+
     await tx.insert(applications).values(appRows);
 
     // query – grab ids so logs can point at the right application rows
@@ -191,41 +237,38 @@ export async function seedDb(): Promise<void> {
       .select({
         id: applications.id,
         company: applications.company,
+        status: applications.status,
       })
       .from(applications);
 
-    const appIdByCompany = Object.fromEntries(apps.map((a) => [a.company, a.id])) as Record<
-      string,
-      number
-    >;
-
-    // insert – status timelines (each application gets at least one log; some get 2–3 for richer history)
+    // insert – status timelines (each application: logs match latest `applications.status`)
     const logRows: (typeof applicationStatusLogs.$inferInsert)[] = [];
     for (const a of apps) {
-      const base = nowMs - 1000 * 60 * 60 * 2; // 2 hours ago
-      const seedNumMatch = a.company.match(/#(\d{2})$/);
-      const seedNum = seedNumMatch ? Number(seedNumMatch[1]) : null;
-      const seq =
-        seedNum != null && seedNum % 5 === 0
-          ? ['Applied', 'Screening', 'Interview']
-          : seedNum != null && seedNum % 4 === 0
-            ? ['Applied', 'Screening']
-            : ['Applied'];
-
+      const base = nowMs - 1000 * 60 * 60 * 2;
+      const seq = [...statusTimelineForLatest(a.status)];
       for (let i = 0; i < seq.length; i++) {
+        const st = seq[i]!;
+        let note = 'Seed: status update';
+        if (st === 'Applied') note = 'Seed: application submitted';
+        else if (st === 'Screening') note = 'Seed: recruiter / HR screen';
+        else if (st === 'Interview') note = 'Seed: interview stage';
+        else if (st === 'Offer') note = 'Seed: offer received';
+        else if (st === 'Rejected') note = 'Seed: application not successful';
+        else if (st === 'Withdrawn') note = 'Seed: candidate withdrew';
         logRows.push({
           applicationId: a.id,
-          status: seq[i]!,
-          note: i === 0 ? 'Seed: submitted application' : i === 1 ? 'Seed: recruiter screen' : 'Seed: interview booked',
+          status: st,
+          note,
           createdAt: base - i * 1000 * 60 * 60 * 24,
         });
       }
     }
     await tx.insert(applicationStatusLogs).values(logRows);
 
-    // insert – sample targets (global + per category)
+    // insert – targets (global + per-category; current + prior periods; human-readable titles)
     await tx.insert(targets).values([
       {
+        title: 'Pipeline: new applications this week (all categories)',
         scope: 'global',
         categoryId: null,
         periodType: 'week',
@@ -234,6 +277,16 @@ export async function seedDb(): Promise<void> {
         createdAt: nowMs,
       },
       {
+        title: 'Pipeline: new applications last week (all categories)',
+        scope: 'global',
+        categoryId: null,
+        periodType: 'week',
+        periodStart: prevWeekStart,
+        goalCount: 8,
+        createdAt: nowMs,
+      },
+      {
+        title: 'Pipeline: applications this calendar month (all categories)',
         scope: 'global',
         categoryId: null,
         periodType: 'month',
@@ -242,6 +295,16 @@ export async function seedDb(): Promise<void> {
         createdAt: nowMs,
       },
       {
+        title: 'Pipeline: applications last calendar month (all categories)',
+        scope: 'global',
+        categoryId: null,
+        periodType: 'month',
+        periodStart: prevMonthStart,
+        goalCount: 25,
+        createdAt: nowMs,
+      },
+      {
+        title: 'Software engineering: weekly outreach volume',
         scope: 'category',
         categoryId: catByName['Software Engineering']!,
         periodType: 'week',
@@ -250,6 +313,16 @@ export async function seedDb(): Promise<void> {
         createdAt: nowMs,
       },
       {
+        title: 'Software engineering: last week volume',
+        scope: 'category',
+        categoryId: catByName['Software Engineering']!,
+        periodType: 'week',
+        periodStart: prevWeekStart,
+        goalCount: 4,
+        createdAt: nowMs,
+      },
+      {
+        title: 'Data & analytics: monthly applications',
         scope: 'category',
         categoryId: catByName['Data / Analytics']!,
         periodType: 'month',
@@ -258,6 +331,7 @@ export async function seedDb(): Promise<void> {
         createdAt: nowMs,
       },
       {
+        title: 'Product & UX: monthly applications',
         scope: 'category',
         categoryId: catByName['Product / UX']!,
         periodType: 'month',
@@ -266,11 +340,21 @@ export async function seedDb(): Promise<void> {
         createdAt: nowMs,
       },
       {
+        title: 'Cyber & IT support: weekly applications',
         scope: 'category',
         categoryId: catByName['Cyber / IT Support']!,
         periodType: 'week',
         periodStart: weekStart,
         goalCount: 3,
+        createdAt: nowMs,
+      },
+      {
+        title: 'Marketing & content: weekly applications',
+        scope: 'category',
+        categoryId: catByName['Marketing / Content']!,
+        periodType: 'week',
+        periodStart: weekStart,
+        goalCount: 2,
         createdAt: nowMs,
       },
     ]);

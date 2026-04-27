@@ -1,10 +1,11 @@
-// Career tip card – small external API feature (loading/error/offline states)
+// Career tip card — public Advice Slip API + AsyncStorage cache; loading, error, and live/cached success states.
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import type { CareerTip } from '@/lib/career-tip';
+import { formatRelativeTimeMs } from '@/lib/format-relative-time';
 import { getCareerTipWithFallback } from '@/lib/career-tip';
 
 type CareerTipCardProps = {
@@ -13,6 +14,9 @@ type CareerTipCardProps = {
   mutedColor: string;
   surfaceMuted: string;
   borderColor: string;
+  errorTextColor: string;
+  errorSurfaceColor: string;
+  errorBorderColor: string;
 };
 
 export function CareerTipCard({
@@ -21,13 +25,14 @@ export function CareerTipCard({
   mutedColor,
   surfaceMuted,
   borderColor,
+  errorTextColor,
+  errorSurfaceColor,
+  errorBorderColor,
 }: CareerTipCardProps) {
-  // Section: state
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [tip, setTip] = useState<CareerTip | null>(null);
 
-  // Section: load helper (uses cache fallback when offline)
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -35,6 +40,7 @@ export function CareerTipCard({
       const t = await getCareerTipWithFallback();
       setTip(t);
     } catch (e) {
+      setTip(null);
       setError(e instanceof Error ? e.message : 'Could not load tip.');
     } finally {
       setLoading(false);
@@ -50,61 +56,99 @@ export function CareerTipCard({
     return tip.source === 'cache' ? 'Offline (cached)' : 'Live (API)';
   }, [tip]);
 
+  const refreshLabel = error ? 'Retry' : 'Refresh';
+
   return (
     <View
       style={[styles.card, { backgroundColor: surfaceMuted, borderColor }]}
-      accessible
-      accessibilityLabel={
-        loading
-          ? 'Career tip. Loading.'
-          : error
-            ? `Career tip. Error: ${error}`
-            : `Career tip. ${tip?.text ?? ''}`
-      }>
+      accessible={false}
+      accessibilityLabel="Career tip card">
       <View style={styles.headRow}>
-        <ThemedText type="defaultSemiBold">Career tip (API)</ThemedText>
+        <ThemedText type="defaultSemiBold" style={styles.headTitle}>
+          Career tip (API)
+        </ThemedText>
         <Pressable
           onPress={() => void load()}
+          disabled={loading}
           accessibilityRole="button"
-          accessibilityLabel="Refresh tip"
-          style={({ pressed }) => [styles.refreshBtn, { opacity: pressed ? 0.75 : 1 }]}>
-          <ThemedText style={[styles.refreshText, { color: tint }]}>Refresh</ThemedText>
+          accessibilityLabel={error ? 'Retry loading career tip' : 'Refresh career tip'}
+          accessibilityState={{ disabled: loading }}
+          style={({ pressed }) => [styles.refreshBtn, { opacity: pressed ? 0.75 : loading ? 0.5 : 1 }]}>
+          <ThemedText style={[styles.refreshText, { color: tint }]}>{refreshLabel}</ThemedText>
         </Pressable>
       </View>
 
-      {loading ? (
-        <View style={styles.loadingRow}>
-          <ActivityIndicator size="small" color={tint} />
-          <ThemedText style={{ color: mutedColor }}>Loading tip…</ThemedText>
-        </View>
-      ) : error ? (
-        <View style={styles.errWrap}>
-          <ThemedText style={styles.errText}>{error}</ThemedText>
-          <ThemedText style={{ color: mutedColor }}>
-            Tip loads from a public API. If you’re offline, it will show the last cached tip.
-          </ThemedText>
-        </View>
-      ) : (
-        <>
-          {subtitle ? (
-            <ThemedText style={[styles.sub, { color: mutedColor }]}>{subtitle}</ThemedText>
-          ) : null}
-          <ThemedText style={[styles.tip, { color: textColor }]}>{tip?.text}</ThemedText>
-        </>
-      )}
+      <View accessibilityLiveRegion="polite" accessible={false}>
+        {loading ? (
+          <View style={styles.loadingRow} accessible accessibilityRole="progressbar" accessibilityLabel="Loading career tip">
+            <ActivityIndicator size="small" color={tint} accessibilityElementsHidden />
+            <ThemedText style={{ color: mutedColor }}>Fetching a fresh tip…</ThemedText>
+          </View>
+        ) : error ? (
+          <View
+            style={[
+              styles.errPanel,
+              {
+                backgroundColor: errorSurfaceColor,
+                borderColor: errorBorderColor,
+              },
+            ]}
+            accessible
+            accessibilityRole="alert"
+            accessibilityLabel={`Career tip could not load. ${error}`}>
+            <ThemedText style={[styles.errTitle, { color: errorTextColor }]}>Could not load tip</ThemedText>
+            <ThemedText style={[styles.errBody, { color: textColor }]}>{error}</ThemedText>
+            <ThemedText style={[styles.hint, { color: mutedColor }]}>
+              With no saved tip yet, you need a connection once. After that, the last tip is cached for offline use.
+            </ThemedText>
+          </View>
+        ) : (
+          <View accessible accessibilityRole="text" accessibilityLabel={`Career tip. ${tip?.text ?? ''}`}>
+            {subtitle ? (
+              <ThemedText style={[styles.sub, { color: mutedColor }]}>{subtitle}</ThemedText>
+            ) : null}
+            <ThemedText style={[styles.tip, { color: textColor }]}>{tip?.text}</ThemedText>
+            {tip ? (
+              <ThemedText style={[styles.updated, { color: mutedColor }]}>
+                Updated {formatRelativeTimeMs(tip.fetchedAtMs)}
+              </ThemedText>
+            ) : null}
+          </View>
+        )}
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   card: { borderWidth: 1, borderRadius: 14, padding: 12, gap: 8 },
-  headRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  headRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  headTitle: { flexGrow: 1, flexShrink: 1, minWidth: 0 },
   refreshBtn: { paddingVertical: 6, paddingHorizontal: 8, borderRadius: 10 },
   refreshText: { fontSize: 14, fontWeight: '800' },
-  loadingRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 6 },
+  loadingRow: {
+    flexDirection: 'row',
+    flexWrap: 'nowrap',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 6,
+  },
   sub: { fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.3 },
   tip: { fontSize: 15, lineHeight: 21, fontWeight: '600' },
-  errWrap: { gap: 6 },
-  errText: { color: '#b91c1c', fontWeight: '700' },
+  updated: { fontSize: 12, fontWeight: '600', marginTop: 6 },
+  errPanel: {
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 10,
+    gap: 6,
+  },
+  errTitle: { fontWeight: '800', fontSize: 15 },
+  errBody: { fontWeight: '600', fontSize: 14, lineHeight: 20 },
+  hint: { fontSize: 12, lineHeight: 17, fontWeight: '600' },
 });
-

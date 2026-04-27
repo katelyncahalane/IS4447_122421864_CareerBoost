@@ -1,15 +1,38 @@
-// unit test – seed inserts into applications, categories, targets, and application_status_logs (idempotent)
+// Unit tests — seedDb inserts sample data into all **core tracker** tables (CareerBoost: applications, not habits/trips):
+// categories, applications, application_status_logs, targets. Idempotent second run must not duplicate rows.
 
-// imports
-import { seedDb } from '@/db/seed';
+import { SEED_EXPECTED_APPLICATIONS_MIN, seedDb } from '@/db/seed';
 import { applicationStatusLogs, applications, categories, targets } from '@/db/schema';
 
-// types – fake in-memory table names
 type TableName = 'categories' | 'applications' | 'application_status_logs' | 'targets';
 
 type Row = Record<string, unknown>;
 
-// mock – replace real sqlite with tiny in-memory store for fast tests
+/** Mutable store reset between tests so idempotency is tested from an empty “DB”. */
+const seedMockTables: Record<TableName, Row[]> = {
+  categories: [],
+  applications: [],
+  application_status_logs: [],
+  targets: [],
+};
+
+const seedNextId: Record<TableName, number> = {
+  categories: 1,
+  applications: 1,
+  application_status_logs: 1,
+  targets: 1,
+};
+
+function resetSeedMockTables() {
+  for (const k of Object.keys(seedMockTables) as TableName[]) {
+    seedMockTables[k].length = 0;
+  }
+  seedNextId.categories = 1;
+  seedNextId.applications = 1;
+  seedNextId.application_status_logs = 1;
+  seedNextId.targets = 1;
+}
+
 jest.mock('@/db/client', () => {
   const schema = jest.requireActual('@/db/schema') as typeof import('@/db/schema');
   const tableNameFromLocal = (table: unknown): TableName => {
@@ -20,30 +43,18 @@ jest.mock('@/db/client', () => {
     throw new Error('Unknown table');
   };
 
-  const state: Record<TableName, Row[]> = {
-    categories: [],
-    applications: [],
-    application_status_logs: [],
-    targets: [],
-  };
-
-  const nextId: Record<TableName, number> = {
-    categories: 1,
-    applications: 1,
-    application_status_logs: 1,
-    targets: 1,
-  };
-
   const db = {
     select: (shape?: any) => ({
       from: async (table: unknown) => {
         const name = tableNameFromLocal(table);
-        // seed.ts needs to read back { id, company } from applications to create status logs
         if (shape && name === 'applications' && 'id' in shape && 'company' in shape) {
-          return state.applications.map((r) => ({ id: r.id as number, company: r.company as string }));
+          return seedMockTables.applications.map((r) => ({
+            id: r.id as number,
+            company: r.company as string,
+            status: (r.status as string) ?? 'Applied',
+          }));
         }
-        // default: count-style helper used by seed guards + tests
-        return [{ c: state[name].length }];
+        return [{ c: seedMockTables[name].length }];
       },
     }),
 
@@ -51,17 +62,17 @@ jest.mock('@/db/client', () => {
       values: (rows: Row | Row[]) => {
         const name = tableNameFromLocal(table);
         const arr = Array.isArray(rows) ? rows : [rows];
-        const startIdx = state[name].length;
+        const startIdx = seedMockTables[name].length;
         for (const r of arr) {
-          state[name].push({ id: nextId[name]++, ...r });
+          seedMockTables[name].push({ id: seedNextId[name]++, ...r });
         }
         return {
           returning: async (shape?: unknown) => {
             if (shape && name === 'categories') {
-              return state.categories.map((r) => ({ id: r.id as number, name: r.name as string }));
+              return seedMockTables.categories.map((r) => ({ id: r.id as number, name: r.name as string }));
             }
             if (shape && name === 'applications') {
-              const inserted = state.applications.slice(startIdx);
+              const inserted = seedMockTables.applications.slice(startIdx);
               return inserted.map((r) => ({
                 id: r.id as number,
                 company: r.company as string,
@@ -81,24 +92,32 @@ jest.mock('@/db/client', () => {
   return { db };
 });
 
-// tests
-describe('seedDb', () => {
-  it('inserts into all core tables once with no errors', async () => {
+beforeEach(() => {
+  resetSeedMockTables();
+});
+
+describe('seedDb (unit)', () => {
+  it('inserts sample rows into categories, applications, application_status_logs, and targets without throwing', async () => {
     await expect(seedDb()).resolves.toBeUndefined();
 
     const { db } = require('@/db/client');
-    const c1 = (await (db as any).select({ c: 1 }).from(categories))[0].c;
-    const c2 = (await (db as any).select({ c: 1 }).from(applications))[0].c;
-    const c3 = (await (db as any).select({ c: 1 }).from(applicationStatusLogs))[0].c;
-    const c4 = (await (db as any).select({ c: 1 }).from(targets))[0].c;
+    const catCount = (await (db as any).select({ c: 1 }).from(categories))[0].c as number;
+    const appCount = (await (db as any).select({ c: 1 }).from(applications))[0].c as number;
+    const logCount = (await (db as any).select({ c: 1 }).from(applicationStatusLogs))[0].c as number;
+    const targetCount = (await (db as any).select({ c: 1 }).from(targets))[0].c as number;
 
-    expect(c1).toBeGreaterThan(0);
-    expect(c2).toBeGreaterThan(0);
-    expect(c3).toBeGreaterThan(0);
-    expect(c4).toBeGreaterThan(0);
+    expect(catCount).toBeGreaterThanOrEqual(5);
+    expect(appCount).toBeGreaterThanOrEqual(SEED_EXPECTED_APPLICATIONS_MIN);
+    expect(logCount).toBeGreaterThanOrEqual(appCount);
+    expect(targetCount).toBeGreaterThanOrEqual(8);
+
+    const catNames = seedMockTables.categories.map((r) => r.name as string);
+    expect(catNames).toContain('Software Engineering');
+    expect(seedMockTables.targets.some((r) => r.scope === 'global')).toBe(true);
+    expect(seedMockTables.targets.some((r) => r.scope === 'category')).toBe(true);
   });
 
-  it('second seed does not duplicate rows (idempotent)', async () => {
+  it('does not duplicate any core table rows when seedDb runs twice on an empty store (idempotent)', async () => {
     const { db } = require('@/db/client');
     const counts = async () => ({
       categories: (await (db as any).select({ c: 1 }).from(categories))[0].c as number,
@@ -108,9 +127,11 @@ describe('seedDb', () => {
     });
 
     await seedDb();
-    const first = await counts();
+    const afterFirst = await counts();
+    expect(afterFirst.applications).toBeGreaterThan(0);
+
     await seedDb();
-    const second = await counts();
-    expect(second).toEqual(first);
+    const afterSecond = await counts();
+    expect(afterSecond).toEqual(afterFirst);
   });
 });

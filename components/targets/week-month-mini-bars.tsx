@@ -9,6 +9,8 @@ type MiniBar = {
   current: number;
   goal: number;
   color: string;
+  /** Remaining vs over-goal, e.g. "3 more to meet goal" or "2 over goal". */
+  detail?: string;
 };
 
 type WeekMonthMiniBarsProps = {
@@ -36,7 +38,8 @@ export function WeekMonthMiniBars({
       accessibilityLabel={accessibilitySummary}>
       <ThemedText type="defaultSemiBold">{title}</ThemedText>
       <ThemedText style={[styles.note, { color: mutedColor }]}>
-        Quick comparison of progress toward your current week and month goals.
+        Global goals for this calendar week and month — numbers come only from saved application dates. Each row shows
+        progress, remaining to the goal, or how far you are past it.
       </ThemedText>
 
       <View style={styles.rows}>
@@ -51,10 +54,15 @@ export function WeekMonthMiniBars({
                   {b.current}/{b.goal}
                 </ThemedText>
               </View>
+              {b.detail ? (
+                <ThemedText style={[styles.detail, { color: mutedColor }]} accessibilityRole="text">
+                  {b.detail}
+                </ThemedText>
+              ) : null}
               <View
                 style={[styles.track, { backgroundColor: trackColor }]}
                 accessibilityRole="progressbar"
-                accessibilityLabel={`${b.label} progress ${b.current} of ${b.goal}`}
+                accessibilityLabel={`${b.label}. ${b.current} of ${b.goal} applications.${b.detail ? ` ${b.detail}` : ''}`}
                 accessibilityValue={{ now: b.current, min: 0, max: b.goal }}>
                 <View
                   style={[
@@ -80,6 +88,7 @@ const styles = StyleSheet.create({
   rowTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   lab: { fontSize: 13, fontWeight: '800' },
   val: { fontSize: 13, fontWeight: '800' },
+  detail: { fontSize: 12, lineHeight: 16, fontWeight: '700' },
   track: { height: 12, borderRadius: 999, overflow: 'hidden' },
   fill: { height: '100%', borderRadius: 999, minWidth: 6 },
 });

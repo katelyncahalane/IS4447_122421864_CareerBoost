@@ -2,9 +2,12 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+import { fetchWithTimeout } from '@/lib/fetch-with-timeout';
+
 // Public API (no key): returns a short advice string
 const TIP_URL = 'https://api.adviceslip.com/advice';
 const TIP_CACHE_KEY = '@careerboost/career_tip_v1';
+const FETCH_TIMEOUT_MS = 14_000;
 
 export type CareerTip = {
   text: string;
@@ -27,19 +30,23 @@ export async function getCachedTip(): Promise<CacheShape | null> {
 }
 
 export async function fetchCareerTip(): Promise<CareerTip> {
-  // Section: network fetch (simple, with timeout-ish guard via fetch)
-  const res = await fetch(TIP_URL, {
-    headers: {
-      // avoid cached responses during demos
-      'Cache-Control': 'no-cache',
-      Pragma: 'no-cache',
+  const res = await fetchWithTimeout(
+    TIP_URL,
+    {
+      headers: {
+        'Cache-Control': 'no-cache',
+        Pragma: 'no-cache',
+      },
     },
-  });
-  if (!res.ok) throw new Error(`Tip request failed (${res.status}).`);
+    FETCH_TIMEOUT_MS,
+  );
+  if (!res.ok) {
+    throw new Error(`Advice Slip request failed (${res.status}). Try again in a moment.`);
+  }
 
   const data = (await res.json()) as { slip?: { advice?: string } };
   const text = data?.slip?.advice?.trim();
-  if (!text) throw new Error('Tip response was empty.');
+  if (!text) throw new Error('Tip response was empty or malformed.');
 
   const out: CacheShape = { text, fetchedAtMs: Date.now() };
   await AsyncStorage.setItem(TIP_CACHE_KEY, JSON.stringify(out));

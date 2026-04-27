@@ -32,7 +32,16 @@ yarn-error.*
 
 # local env files (never commit secrets — API keys stay in .env on your machine only)
 .env
+.env.*
+!.env.example
 .env*.local
+
+# common credential filenames (do not commit)
+google-services.json
+GoogleService-Info.plist
+**/serviceAccount*.json
+secrets.json
+credentials.json
 
 # typescript
 *.tsbuildinfo

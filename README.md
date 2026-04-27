@@ -42,6 +42,19 @@ To learn more about developing your project with Expo, look at the following res
 - [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
 - [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
 
+### CareerBoost stack — books, docs, and video
+
+- **React (book):** [Learning React, 2nd Edition (O’Reilly)](https://www.oreilly.com/library/view/learning-react-2nd/9781491966981/) — components, state, hooks, and ecosystem.
+- **React (site):** [react.dev — Learn](https://react.dev/learn) and [API reference](https://react.dev/reference/react).
+- **React (GitHub):** [facebook/react](https://github.com/facebook/react).
+- **React Native:** [Documentation](https://reactnative.dev/docs/getting-started) and [StyleSheet](https://reactnative.dev/docs/stylesheet).
+- **Expo:** [Documentation](https://docs.expo.dev/) — [Expo Router](https://docs.expo.dev/router/introduction/) — [SQLite](https://docs.expo.dev/versions/latest/sdk/sqlite/) — [Notifications](https://docs.expo.dev/versions/latest/sdk/notifications/).
+- **Expo (GitHub):** [expo/expo](https://github.com/expo/expo).
+- **Navigation:** [React Navigation](https://reactnavigation.org/docs/getting-started).
+- **Drizzle ORM:** [Docs](https://orm.drizzle.team/docs/overview) — [GitHub](https://github.com/drizzle-team/drizzle-orm) — [Expo + Drizzle guide](https://docs.expo.dev/guides/using-sqlite-with-drizzle/).
+- **YouTube (short React overview):** [Fireship — React in 100 Seconds](https://www.youtube.com/watch?v=Tn6-pxvhUWU).
+- **YouTube (Expo):** [Expo Developers channel](https://www.youtube.com/@expo.dev/videos).
+
 ## Join the community
 
 Join our community of developers creating universal apps.

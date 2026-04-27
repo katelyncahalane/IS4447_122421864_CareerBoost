@@ -1,6 +1,6 @@
 // streak – consecutive-day streak tracking from stored ISO dates (advanced feature; local-only)
 
-type StreakResult = {
+export type StreakResult = {
   /** consecutive days ending today with at least one record */
   current: number;
   /** longest consecutive run across the whole dataset */

@@ -55,14 +55,14 @@ function triggerWebDownload(csv: string, filename: string): void {
  * Writes every saved application (not the current list filters) to a CSV file and opens the
  * system share sheet on iOS/Android, or triggers a browser download on web.
  */
-export async function exportAndShareApplicationsCsv(): Promise<void> {
+export async function exportAndShareApplicationsCsv(): Promise<{ rowCount: number }> {
   const rows = await loadAllApplicationsForCsv();
   const csv = rowsToCsvString(rows);
   const filename = exportFilename();
 
   if (Platform.OS === 'web') {
     triggerWebDownload(csv, filename);
-    return;
+    return { rowCount: rows.length };
   }
 
   const out = new File(Paths.document, filename);
@@ -84,4 +84,5 @@ export async function exportAndShareApplicationsCsv(): Promise<void> {
     dialogTitle: 'Export applications',
     UTI: 'public.comma-separated-values-text',
   });
+  return { rowCount: rows.length };
 }

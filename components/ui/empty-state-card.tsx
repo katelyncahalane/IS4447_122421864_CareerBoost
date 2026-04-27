@@ -11,6 +11,8 @@ type EmptyStateCardProps = {
   icon: keyof typeof Ionicons.glyphMap;
   title: string;
   message: string;
+  /** Extra hint for screen readers (optional). */
+  accessibilityHint?: string;
   tint: string;
   surface: string;
   border: string;
@@ -22,6 +24,7 @@ export function EmptyStateCard({
   icon,
   title,
   message,
+  accessibilityHint,
   tint,
   surface,
   border,
@@ -33,7 +36,8 @@ export function EmptyStateCard({
       style={[styles.wrap, cardShadowStyle, { backgroundColor: surface, borderColor: border }]}
       accessible
       accessibilityRole="text"
-      accessibilityLabel={`${title}. ${message}`}>
+      accessibilityLabel={`${title}. ${message}`}
+      accessibilityHint={accessibilityHint}>
       <View style={[styles.iconCircle, { backgroundColor: `${tint}18` }]}>
         <Ionicons name={icon} size={32} color={tint} accessibilityElementsHidden importantForAccessibility="no" />
       </View>

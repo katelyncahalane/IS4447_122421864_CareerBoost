@@ -5,10 +5,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
-import { Colors } from '@/constants/theme';
+import type { ThemePalette } from '@/constants/theme';
 
 // types
-type Palette = (typeof Colors)['light'];
+type Palette = ThemePalette;
 
 export type StatItem = {
   label: string;

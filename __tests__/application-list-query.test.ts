@@ -4,6 +4,7 @@
 import {
   applicationsListWhere,
   normaliseIsoDateInput,
+  parseMetricBound,
   stripLikeWildcards,
 } from '@/lib/application-list-query';
 
@@ -12,6 +13,10 @@ const emptyFilters = {
   categoryId: null as number | null,
   dateFrom: null as string | null,
   dateTo: null as string | null,
+  statuses: [] as readonly string[],
+  metricMin: null as number | null,
+  metricMax: null as number | null,
+  hasNotesOnly: false,
 };
 
 // tests
@@ -33,6 +38,18 @@ describe('normaliseIsoDateInput', () => {
   it('rejects malformed strings', () => {
     expect(normaliseIsoDateInput('26-04-2026')).toBeNull();
     expect(normaliseIsoDateInput('')).toBeNull();
+  });
+});
+
+describe('parseMetricBound', () => {
+  it('accepts positive integers', () => {
+    expect(parseMetricBound('  12 ')).toBe(12);
+  });
+
+  it('rejects zero and non-numeric', () => {
+    expect(parseMetricBound('0')).toBeNull();
+    expect(parseMetricBound('x')).toBeNull();
+    expect(parseMetricBound('')).toBeNull();
   });
 });
 
@@ -68,5 +85,21 @@ describe('applicationsListWhere', () => {
     expect(
       applicationsListWhere({ ...emptyFilters, dateTo: '2026-12-31' }),
     ).toBeDefined();
+  });
+
+  it('returns a clause when statuses are set', () => {
+    expect(
+      applicationsListWhere({ ...emptyFilters, statuses: ['Applied', 'Offer'] }),
+    ).toBeDefined();
+  });
+
+  it('returns a clause when metric bounds are set', () => {
+    expect(
+      applicationsListWhere({ ...emptyFilters, metricMin: 2, metricMax: 10 }),
+    ).toBeDefined();
+  });
+
+  it('returns a clause when hasNotesOnly is true', () => {
+    expect(applicationsListWhere({ ...emptyFilters, hasNotesOnly: true })).toBeDefined();
   });
 });

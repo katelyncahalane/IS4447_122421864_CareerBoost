@@ -14,11 +14,13 @@ import {
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { StatusTimeline, type StatusLogRow } from '@/components/application/status-timeline';
 import FormField from '@/components/ui/form-field';
-import { Colors } from '@/constants/theme';
 import { db } from '@/db/client';
 import { applicationStatusLogs, applications, categories } from '@/db/schema';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useThemePalette } from '@/hooks/use-theme-palette';
+import type { ApplicationStatus } from '@/lib/application-statuses';
+import { APPLICATION_STATUSES } from '@/lib/application-statuses';
 import type { ApplicationFormErrors } from '@/lib/validate-application-form';
 import { validateApplicationForm } from '@/lib/validate-application-form';
 import { asc, eq } from 'drizzle-orm';
@@ -27,17 +29,13 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 // types
 type CategoryRow = { id: number; name: string; color: string; icon: string };
 
-const STATUSES = ['Applied', 'Screening', 'Interview', 'Offer', 'Rejected'] as const;
-type Status = (typeof STATUSES)[number];
-
 // screen
 export default function EditApplicationScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ id?: string }>();
   const id = Number.parseInt(params.id ?? '', 10);
 
-  const colorScheme = useColorScheme() ?? 'light';
-  const palette = Colors[colorScheme];
+  const palette = useThemePalette();
 
   // state
   const [loading, setLoading] = useState(true);
@@ -49,9 +47,11 @@ export default function EditApplicationScreen() {
   const [appliedDate, setAppliedDate] = useState('');
   const [metricValue, setMetricValue] = useState('');
   const [notes, setNotes] = useState('');
-  const [status, setStatus] = useState<Status>('Applied');
-  const [initialStatus, setInitialStatus] = useState<Status>('Applied');
+  const [status, setStatus] = useState<ApplicationStatus>('Applied');
+  const [initialStatus, setInitialStatus] = useState<ApplicationStatus>('Applied');
   const [categoryId, setCategoryId] = useState<number | null>(null);
+  const [statusLogs, setStatusLogs] = useState<StatusLogRow[]>([]);
+  const [statusChangeNote, setStatusChangeNote] = useState('');
 
   const [fieldErrors, setFieldErrors] = useState<ApplicationFormErrors>({});
 
@@ -73,7 +73,7 @@ export default function EditApplicationScreen() {
     void (async () => {
       setLoading(true);
       try {
-        const [catData, appData] = await Promise.all([
+        const [catData, appData, logData] = await Promise.all([
           db
             .select({
               id: categories.id,
@@ -96,6 +96,16 @@ export default function EditApplicationScreen() {
             .from(applications)
             .where(eq(applications.id, id))
             .limit(1),
+          db
+            .select({
+              id: applicationStatusLogs.id,
+              status: applicationStatusLogs.status,
+              note: applicationStatusLogs.note,
+              createdAt: applicationStatusLogs.createdAt,
+            })
+            .from(applicationStatusLogs)
+            .where(eq(applicationStatusLogs.applicationId, id))
+            .orderBy(asc(applicationStatusLogs.createdAt)),
         ]);
 
         if (!mounted) return;
@@ -114,9 +124,13 @@ export default function EditApplicationScreen() {
         setMetricValue(String(row.metricValue));
         setCategoryId(row.categoryId);
         setNotes(row.notes ?? '');
-        const s = (STATUSES.includes(row.status as Status) ? (row.status as Status) : 'Applied') as Status;
+        const raw = row.status as string;
+        const s = (APPLICATION_STATUSES as readonly string[]).includes(raw)
+          ? (raw as ApplicationStatus)
+          : 'Applied';
         setStatus(s);
         setInitialStatus(s);
+        setStatusLogs(logData);
       } finally {
         if (mounted) setLoading(false);
       }
@@ -165,10 +179,11 @@ export default function EditApplicationScreen() {
         .where(eq(applications.id, id));
 
       if (status !== initialStatus) {
+        const noteText = statusChangeNote.trim() || 'Status updated';
         await db.insert(applicationStatusLogs).values({
           applicationId: id,
           status,
-          note: 'Status updated',
+          note: noteText,
           createdAt: now,
         });
       }
@@ -181,7 +196,7 @@ export default function EditApplicationScreen() {
 
   // handler – delete logs first so foreign keys do not block delete
   const onDelete = () => {
-    Alert.alert('Delete application?', 'This will remove the application and its status history.', [
+    Alert.alert('Delete this record?', 'This removes the application row, notes, and its full status history from this device.', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Delete',
@@ -205,7 +220,7 @@ export default function EditApplicationScreen() {
   if (loading) {
     return (
       <ThemedView style={styles.centered}>
-        <Stack.Screen options={{ title: 'Edit application' }} />
+        <Stack.Screen options={{ title: 'Edit record' }} />
         <ActivityIndicator size="large" color={palette.tint} />
         <ThemedText style={styles.muted}>Loading…</ThemedText>
       </ThemedView>
@@ -215,8 +230,16 @@ export default function EditApplicationScreen() {
   // render – main form + category modal
   return (
     <ThemedView style={styles.flex}>
-      <Stack.Screen options={{ title: 'Edit application' }} />
+      <Stack.Screen options={{ title: 'Edit record' }} />
       <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
+        <View style={[styles.storyCard, { borderColor: palette.borderSubtle, backgroundColor: palette.surfaceMuted }]}>
+          <ThemedText type="defaultSemiBold">Edit this record</ThemedText>
+          <ThemedText style={[styles.storyLine, { color: palette.icon }]}>
+            Adjust date, primary metric, category, company, role, or notes. Change pipeline status when you move forward
+            — your timeline stays below. Delete removes this record and its history.
+          </ThemedText>
+        </View>
+
         <FormField
           label="Company"
           value={company}
@@ -240,7 +263,8 @@ export default function EditApplicationScreen() {
           errorText={fieldErrors.role}
         />
         <FormField
-          label="Applied date (YYYY-MM-DD)"
+          label="Date applied (YYYY-MM-DD)"
+          hint="Required. Calendar day you sent the application."
           value={appliedDate}
           onChangeText={(v) => {
             setAppliedDate(v);
@@ -252,20 +276,24 @@ export default function EditApplicationScreen() {
           errorText={fieldErrors.appliedDate}
         />
         <FormField
-          label="Metric value"
+          label="Primary metric"
+          hint="Required. One positive whole number — duration (e.g. minutes) or a count, same meaning you used when you created the record."
           value={metricValue}
           onChangeText={(v) => {
             setMetricValue(v);
             setFieldErrors((e) => ({ ...e, metricValue: undefined }));
           }}
-          placeholder="e.g. 1"
+          placeholder="e.g. 30 or 1"
           keyboardType="numeric"
           autoCapitalize="none"
           errorText={fieldErrors.metricValue}
         />
 
         <View style={styles.fieldBlock}>
-          <ThemedText type="defaultSemiBold">Category</ThemedText>
+          <ThemedText type="defaultSemiBold">Category (required)</ThemedText>
+          <ThemedText style={[styles.fieldHint, { color: palette.icon }]}>
+            Grouping for charts and filters — change if you recategorise this application.
+          </ThemedText>
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Select category"
@@ -283,10 +311,22 @@ export default function EditApplicationScreen() {
           {fieldErrors.category ? <ThemedText style={styles.errorText}>{fieldErrors.category}</ThemedText> : null}
         </View>
 
+        <StatusTimeline
+          logs={statusLogs}
+          palette={{
+            tint: palette.tint,
+            text: palette.text,
+            icon: palette.icon,
+            borderSubtle: palette.borderSubtle,
+            surfaceMuted: palette.surfaceMuted,
+            surfaceCard: palette.surfaceCard,
+          }}
+        />
+
         <View style={styles.fieldBlock}>
           <ThemedText type="defaultSemiBold">Status</ThemedText>
           <View style={styles.statusRow}>
-            {STATUSES.map((s) => {
+            {APPLICATION_STATUSES.map((s) => {
               const selected = s === status;
               return (
                 <Pressable
@@ -309,6 +349,17 @@ export default function EditApplicationScreen() {
           </View>
         </View>
 
+        {status !== initialStatus ? (
+          <FormField
+            label="Note for this status change (optional)"
+            value={statusChangeNote}
+            onChangeText={setStatusChangeNote}
+            placeholder="e.g. Phone screen booked Tuesday"
+            multiline
+            autoCapitalize="sentences"
+          />
+        ) : null}
+
         <FormField
           label="Notes (optional)"
           value={notes}
@@ -321,7 +372,7 @@ export default function EditApplicationScreen() {
         <View style={styles.actions}>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Save changes"
+            accessibilityLabel="Save record changes"
             onPress={() => void onSave()}
             style={({ pressed }) => [
               styles.primaryButton,
@@ -399,6 +450,9 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10 },
   body: { padding: 16, gap: 14 },
+  storyCard: { borderWidth: 1, borderRadius: 12, padding: 12, gap: 6 },
+  storyLine: { fontSize: 14, lineHeight: 20, fontWeight: '500' },
+  fieldHint: { fontSize: 13, lineHeight: 18, fontWeight: '500' },
   muted: { opacity: 0.8 },
   errorText: { color: '#c00', fontSize: 13 },
   fieldBlock: { gap: 6 },

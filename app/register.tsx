@@ -2,13 +2,12 @@
 
 // imports
 import { useMemo, useState } from 'react';
-import { Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { HeroBanner } from '@/components/ui/hero-banner';
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useThemePalette } from '@/hooks/use-theme-palette';
 import { Link } from 'expo-router';
 import { useRouter } from 'expo-router';
 import { setSession } from '@/lib/session';
@@ -17,8 +16,7 @@ import { seedDb } from '@/db/seed';
 
 // screen
 export default function RegisterScreen() {
-  const colorScheme = useColorScheme() ?? 'light';
-  const palette = Colors[colorScheme];
+  const palette = useThemePalette();
   const router = useRouter();
 
   // state
@@ -41,8 +39,13 @@ export default function RegisterScreen() {
   // render
   return (
     <ThemedView style={styles.container}>
-      <HeroBanner colorScheme={colorScheme} eyebrow="CareerBoost" title="Create account" />
+      <HeroBanner eyebrow="CareerBoost" title="Create account" />
 
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollBody}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}>
       <ThemedText style={styles.muted}>Create an account to use CareerBoost on this device.</ThemedText>
 
       <ThemedText type="defaultSemiBold">Username</ThemedText>
@@ -106,7 +109,17 @@ export default function RegisterScreen() {
         style={[styles.input, { color: palette.text, borderColor: palette.icon }]}
       />
 
-      {error ? <ThemedText style={styles.errorText}>{error}</ThemedText> : null}
+      {error ? (
+        <View
+          style={[
+            styles.errorBanner,
+            { borderColor: palette.errorBorder, backgroundColor: palette.errorSurface },
+          ]}
+          accessibilityRole="alert"
+          accessibilityLiveRegion="polite">
+          <ThemedText style={[styles.errorText, { color: palette.errorText }]}>{error}</ThemedText>
+        </View>
+      ) : null}
 
       <View style={styles.actions}>
         <Pressable
@@ -136,6 +149,10 @@ export default function RegisterScreen() {
             })();
           }}
           disabled={!canSubmit}
+          accessibilityRole="button"
+          accessibilityLabel="Create account"
+          accessibilityHint="Registers this username on this device when requirements are met"
+          accessibilityState={{ disabled: !canSubmit }}
           style={({ pressed }) => [
             styles.button,
             {
@@ -143,19 +160,23 @@ export default function RegisterScreen() {
               opacity: !canSubmit ? 0.5 : pressed ? 0.85 : 1,
             },
           ]}>
-          <ThemedText style={[styles.buttonLabel, { color: colorScheme === 'dark' ? '#111' : '#fff' }]}>
+          <ThemedText style={[styles.buttonLabel, { color: palette.onTint }]}>
             Create account
           </ThemedText>
         </Pressable>
 
         <Link href="/login" asChild>
-          <Pressable style={({ pressed }) => [styles.linkButton, { opacity: pressed ? 0.7 : 1 }]}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Back to sign in"
+            style={({ pressed }) => [styles.linkButton, { opacity: pressed ? 0.7 : 1 }]}>
             <ThemedText style={[styles.linkText, { color: palette.tint }]}>
               Back to login
             </ThemedText>
           </Pressable>
         </Link>
       </View>
+      </ScrollView>
     </ThemedView>
   );
 }
@@ -164,9 +185,13 @@ export default function RegisterScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  scroll: { flex: 1 },
+  scrollBody: {
     paddingHorizontal: 16,
-    paddingBottom: 16,
+    paddingBottom: 24,
     gap: 10,
+    flexGrow: 1,
   },
   muted: {
     opacity: 0.8,
@@ -187,9 +212,16 @@ const styles = StyleSheet.create({
     marginTop: 16,
     gap: 12,
   },
+  errorBanner: {
+    marginTop: 4,
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
   errorText: {
-    color: '#c00',
-    marginTop: 2,
+    fontSize: 15,
+    lineHeight: 21,
+    fontWeight: '700',
   },
   button: {
     paddingVertical: 12,

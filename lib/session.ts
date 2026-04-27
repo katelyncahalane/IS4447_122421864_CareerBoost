@@ -1,4 +1,4 @@
-// session – tiny AsyncStorage wrapper for “logged in” user (no server; no passwords stored here)
+// session – AsyncStorage blob for logged-in user id + username only (passwords stay as hashes in SQLite; nothing sent to a server)
 
 // imports
 import AsyncStorage from '@react-native-async-storage/async-storage';

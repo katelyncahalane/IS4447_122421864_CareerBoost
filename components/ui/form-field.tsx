@@ -1,15 +1,23 @@
 // form field – reusable label + text input (used on add / edit screens)
+//
+// References — controlled inputs & accessibility:
+// - React: reacting to input with state: https://react.dev/learn/reacting-to-input-with-state
+// - React Native TextInput: https://reactnative.dev/docs/textinput
+// - Labels / screen readers: https://reactnative.dev/docs/accessibility#accessibilitylabel
+// - React Testing Library Native (testing forms): https://callstack.github.io/react-native-testing-library/docs/api#fireevent
+// - Book (forms in React): https://www.oreilly.com/library/view/learning-react-2nd/9781491966981/
 
 // imports
 import { StyleSheet, TextInput, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useThemePalette } from '@/hooks/use-theme-palette';
 
 // types – props for a single labelled input
 type Props = {
   label: string;
+  /** Short guidance under the label (not the error line). */
+  hint?: string;
   value: string;
   onChangeText: (text: string) => void;
   placeholder?: string;
@@ -23,6 +31,7 @@ type Props = {
 // component
 export default function FormField({
   label,
+  hint,
   value,
   onChangeText,
   placeholder,
@@ -32,14 +41,18 @@ export default function FormField({
   multiline = false,
   errorText,
 }: Props) {
-  const colorScheme = useColorScheme() ?? 'light';
-  const palette = Colors[colorScheme];
+  const palette = useThemePalette();
   const hasError = Boolean(errorText);
 
   // render – stack label above bordered input
   return (
     <View style={styles.container}>
       <ThemedText type="defaultSemiBold">{label}</ThemedText>
+      {hint ? (
+        <ThemedText style={[styles.hint, { color: palette.icon }]} accessibilityRole="text">
+          {hint}
+        </ThemedText>
+      ) : null}
       <TextInput
         value={value}
         onChangeText={onChangeText}
@@ -65,6 +78,7 @@ export default function FormField({
 // styles
 const styles = StyleSheet.create({
   container: { gap: 6 },
+  hint: { fontSize: 13, lineHeight: 18, fontWeight: '500' },
   error: { color: '#c00', fontSize: 13 },
   input: {
     borderWidth: 1,

@@ -1,10 +1,29 @@
-// insights tab – daily / weekly / monthly views + six simple visuals from SQLite applications
+// Insights tab — daily / weekly / monthly views.
+// Rubric: every **chart and numeric insight** below is computed from `rows` / `targets` loaded in `refresh()` via
+// **Drizzle → local SQLite** (`db.select…from applications` joined with `categories`, plus `targets` for streaks).
+// Extra visuals (glance card, daily heatmap, status pills, mean-metric micro bars) use the same in-memory aggregates only.
+// Career tip, weather, and Quotable motivation cards use separate public APIs and are **not** part of stored-record chart data.
+//
+// References — lists, effects, and external fetch UIs:
+// - React useMemo / useCallback: https://react.dev/reference/react/useMemo — https://react.dev/reference/react/useCallback
+// - FlatList performance (patterns): https://reactnative.dev/docs/optimizing-flatlist-configuration
+// - OpenWeather API: https://openweathermap.org/api — Advice Slip: https://api.adviceslip.com/ — Quotable: https://github.com/lukePeavy/quotable
+// - React Native flexbox: https://reactnative.dev/docs/flexbox
+// - fetch + error handling mindset: https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_the_Fetch_API
+// - Video (React lists & keys): https://www.youtube.com/watch?v=sjBdhKObZWQ
 
 import { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 
 import { AvgMetricByStatus } from '@/components/insights/avg-metric-by-status';
 import { CareerTipCard } from '@/components/insights/career-tip-card';
+import { MotivationQuoteCard } from '@/components/insights/motivation-quote-card';
+import { DayHeatmapRow } from '@/components/insights/day-heatmap-row';
+import { InsightGlanceCard } from '@/components/insights/insight-glance-card';
+import { InsightStatusPills } from '@/components/insights/insight-status-pills';
+import { MeanMetricMicroChart } from '@/components/insights/mean-metric-micro-chart';
+import { StreakTrackingSection } from '@/components/insights/streak-tracking-section';
+import { WeatherCard } from '@/components/insights/weather-card';
 import { CategoryMixStrip } from '@/components/insights/category-mix-strip';
 import { InsightStatCards } from '@/components/insights/insight-stat-cards';
 import { SimpleLineChart } from '@/components/insights/simple-line-chart';
@@ -14,26 +33,31 @@ import { ThemedView } from '@/components/themed-view';
 import { EmptyStateCard } from '@/components/ui/empty-state-card';
 import { HeroBanner } from '@/components/ui/hero-banner';
 import { SimpleBarChart } from '@/components/ui/simple-bar-chart';
-import { Colors } from '@/constants/theme';
 import { db } from '@/db/client';
-import { applications, categories } from '@/db/schema';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { applications, categories, targets } from '@/db/schema';
+import { useThemePalette } from '@/hooks/use-theme-palette';
 import {
   INSIGHT_CHART_PALETTE,
   aggregateApplicationsByPeriod,
   aggregateCategoryMix,
+  aggregateMeanMetricByBuckets,
   aggregateSlicesByField,
   averageMetricByStatus,
   filterRowsInInsightWindow,
   maxBucketCount,
+  peakBucket,
+  windowMomentum,
   type InsightPeriod,
 } from '@/lib/insights-aggregates';
 import { computeDailyStreaks } from '@/lib/streak';
+import type { ApplicationForTarget, TargetForProgress } from '@/lib/target-progress';
+import { computeMonthlyTargetStreak, computeWeeklyTargetStreak } from '@/lib/target-streak';
 import { eq } from 'drizzle-orm';
 import { useFocusEffect } from '@react-navigation/native';
 
 type InsightRow = {
   appliedDate: string;
+  categoryId: number;
   status: string;
   metricValue: number;
   categoryName: string;
@@ -53,13 +77,14 @@ function bucketUnitPhrase(period: InsightPeriod): string {
 }
 
 export default function InsightsScreen() {
-  const colorScheme = useColorScheme() ?? 'light';
-  const palette = Colors[colorScheme];
+  const palette = useThemePalette();
   const { width: winW } = useWindowDimensions();
   const chartW = Math.max(280, winW - 32);
 
   const [period, setPeriod] = useState<InsightPeriod>('week');
   const [rows, setRows] = useState<InsightRow[]>([]);
+  const [appsForStreak, setAppsForStreak] = useState<ApplicationForTarget[]>([]);
+  const [targetRowsForStreak, setTargetRowsForStreak] = useState<TargetForProgress[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -67,17 +92,39 @@ export default function InsightsScreen() {
     setLoading(true);
     setLoadError(null);
     try {
-      const data = await db
-        .select({
-          appliedDate: applications.appliedDate,
-          status: applications.status,
-          metricValue: applications.metricValue,
-          categoryName: categories.name,
-          categoryColor: categories.color,
-        })
-        .from(applications)
-        .innerJoin(categories, eq(applications.categoryId, categories.id));
+      const [data, tRows] = await Promise.all([
+        db
+          .select({
+            appliedDate: applications.appliedDate,
+            categoryId: applications.categoryId,
+            status: applications.status,
+            metricValue: applications.metricValue,
+            categoryName: categories.name,
+            categoryColor: categories.color,
+          })
+          .from(applications)
+          .innerJoin(categories, eq(applications.categoryId, categories.id)),
+        db
+          .select({
+            scope: targets.scope,
+            categoryId: targets.categoryId,
+            periodType: targets.periodType,
+            periodStart: targets.periodStart,
+            goalCount: targets.goalCount,
+          })
+          .from(targets),
+      ]);
       setRows(data);
+      setAppsForStreak(data.map((r) => ({ appliedDate: r.appliedDate, categoryId: r.categoryId })));
+      setTargetRowsForStreak(
+        tRows.map((t) => ({
+          scope: t.scope,
+          categoryId: t.categoryId,
+          periodType: t.periodType,
+          periodStart: t.periodStart,
+          goalCount: t.goalCount,
+        })),
+      );
     } catch (e) {
       setLoadError(e instanceof Error ? e.message : 'Could not load applications.');
     } finally {
@@ -95,6 +142,15 @@ export default function InsightsScreen() {
 
   // Section: streak tracking (advanced feature) – uses stored applied dates only
   const streaks = useMemo(() => computeDailyStreaks(appliedDates), [appliedDates]);
+
+  const weeklyTargetStreak = useMemo(
+    () => computeWeeklyTargetStreak(appsForStreak, targetRowsForStreak),
+    [appsForStreak, targetRowsForStreak],
+  );
+  const monthlyTargetStreak = useMemo(
+    () => computeMonthlyTargetStreak(appsForStreak, targetRowsForStreak),
+    [appsForStreak, targetRowsForStreak],
+  );
 
   const buckets = useMemo(
     () => aggregateApplicationsByPeriod(appliedDates, period),
@@ -126,6 +182,29 @@ export default function InsightsScreen() {
     return Math.round((sum / filteredRows.length) * 10) / 10;
   }, [filteredRows]);
 
+  const meanMetricBuckets = useMemo(
+    () => aggregateMeanMetricByBuckets(filteredRows, period),
+    [filteredRows, period],
+  );
+
+  const peak = useMemo(() => peakBucket(buckets), [buckets]);
+  const momentum = useMemo(() => windowMomentum(buckets), [buckets]);
+
+  const offerInWindow = useMemo(
+    () => filteredRows.filter((r) => r.status.trim().toLowerCase() === 'offer').length,
+    [filteredRows],
+  );
+
+  const weekCompareLine = useMemo(() => {
+    if (period !== 'week' || buckets.length < 2) return null as string | null;
+    const latest = buckets[buckets.length - 1];
+    const earlier = buckets.slice(0, -1);
+    const avgEarlier =
+      earlier.length > 0 ? earlier.reduce((s, b) => s + b.count, 0) / earlier.length : 0;
+    const rounded = Math.round(avgEarlier * 10) / 10;
+    return `Latest week (${latest.label}): ${latest.count} applications · average of the seven earlier weeks in this chart: ${rounded}.`;
+  }, [period, buckets]);
+
   const chartData = useMemo(
     () => buckets.map((b) => ({ label: b.label, count: b.count })),
     [buckets],
@@ -140,10 +219,10 @@ export default function InsightsScreen() {
 
   const periodHint =
     period === 'day'
-      ? 'Daily: last 14 calendar days.'
+      ? 'Daily view: last 14 calendar days — includes a dot heatmap plus bar, line, and metric micro charts.'
       : period === 'week'
-        ? 'Weekly: last 8 Monday-start weeks.'
-        : 'Monthly: last 12 calendar months.';
+        ? 'Weekly view: last 8 Monday-start weeks — includes a “latest vs earlier weeks” line in At a glance.'
+        : 'Monthly view: last 12 calendar months — same charts, tuned to month-sized buckets.';
 
   const a11yStats = `Summary for ${sectionTitle(period)}. ${filteredRows.length} applications in this window. ${rows.length} total saved.`;
   const a11yBar = `Colour bar chart by ${bucketUnitPhrase(period)}. Total in chart ${totalInView}.`;
@@ -169,22 +248,46 @@ export default function InsightsScreen() {
   return (
     <ThemedView style={styles.flex}>
       <HeroBanner
-        colorScheme={colorScheme}
         eyebrow="CareerBoost · Insights"
         title="Insights"
-        tagline="Charts and streaks from your saved applications—no account required."
+        tagline="Daily, weekly, and monthly views — bars, line, donut, and extra at-a-glance visuals — all from saved applications on this device."
       />
 
       <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
         <ThemedText style={[styles.note, { color: palette.icon }]}>{periodHint}</ThemedText>
 
-        {/* Section: external API integration (advanced feature) */}
+        {/* Section: external APIs — career tip, weather, GitHub spotlight (keys optional except where noted; see .env.example) */}
         <CareerTipCard
           tint={palette.tint}
           textColor={palette.text}
           mutedColor={palette.icon}
           surfaceMuted={palette.surfaceMuted}
           borderColor={palette.borderSubtle}
+          errorTextColor={palette.errorText}
+          errorSurfaceColor={palette.errorSurface}
+          errorBorderColor={palette.errorBorder}
+        />
+
+        <WeatherCard
+          tint={palette.tint}
+          textColor={palette.text}
+          mutedColor={palette.icon}
+          surfaceMuted={palette.surfaceMuted}
+          borderColor={palette.borderSubtle}
+          errorTextColor={palette.errorText}
+          errorSurfaceColor={palette.errorSurface}
+          errorBorderColor={palette.errorBorder}
+        />
+
+        <MotivationQuoteCard
+          tint={palette.tint}
+          textColor={palette.text}
+          mutedColor={palette.icon}
+          surfaceMuted={palette.surfaceMuted}
+          borderColor={palette.borderSubtle}
+          errorTextColor={palette.errorText}
+          errorSurfaceColor={palette.errorSurface}
+          errorBorderColor={palette.errorBorder}
         />
 
         <View style={styles.segment} accessibilityRole="tablist" accessibilityLabel="Time range">
@@ -219,9 +322,10 @@ export default function InsightsScreen() {
             icon="alert-circle-outline"
             title="Could not load insights"
             message={loadError}
-            tint="#dc2626"
-            surface={palette.surfaceCard}
-            border={palette.borderSubtle}
+            accessibilityHint="Pull down to retry loading from your local database."
+            tint={palette.errorText}
+            surface={palette.errorSurface}
+            border={palette.errorBorder}
             textColor={palette.text}
             mutedColor={palette.icon}
           />
@@ -232,6 +336,7 @@ export default function InsightsScreen() {
             icon="bar-chart-outline"
             title="Nothing in this window yet"
             message="Try Daily, Weekly, or Monthly above, or add applications whose applied dates fall in the selected range."
+            accessibilityHint="Switch the time range tabs at the top of this screen to find saved data."
             tint={palette.tint}
             surface={palette.surfaceCard}
             border={palette.borderSubtle}
@@ -241,46 +346,51 @@ export default function InsightsScreen() {
         ) : null}
 
         {!loadError ? (
-          <>
-            <ThemedText type="defaultSemiBold" style={styles.sectionHead}>
-              Streaks (advanced feature)
-            </ThemedText>
-            <ThemedText style={[styles.caption, { color: palette.icon }]}>
-              A streak day counts when you have at least one saved application on that calendar day.
-            </ThemedText>
-            <View
-              style={[
-                styles.streakCard,
-                { backgroundColor: palette.surfaceMuted, borderColor: palette.borderSubtle },
-              ]}
-              accessible
-              accessibilityLabel={`Streaks. Current streak ${streaks.current} days. Best streak ${streaks.best} days.`}>
-              <View style={styles.streakRow}>
-                <View style={styles.streakTile}>
-                  <ThemedText style={[styles.streakNum, { color: palette.text }]}>
-                    {streaks.current}
-                  </ThemedText>
-                  <ThemedText style={[styles.streakLab, { color: palette.icon }]}>
-                    Current (days)
-                  </ThemedText>
-                </View>
-                <View style={styles.streakTile}>
-                  <ThemedText style={[styles.streakNum, { color: palette.text }]}>
-                    {streaks.best}
-                  </ThemedText>
-                  <ThemedText style={[styles.streakLab, { color: palette.icon }]}>
-                    Best (days)
-                  </ThemedText>
-                </View>
-              </View>
-            </View>
-          </>
+          <StreakTrackingSection
+            palette={palette}
+            loggingStreak={streaks}
+            weeklyTargetStreak={weeklyTargetStreak}
+            monthlyTargetStreak={monthlyTargetStreak}
+          />
         ) : null}
 
         {showCharts ? (
           <>
+            <InsightGlanceCard
+              period={period}
+              peak={peak}
+              momentum={momentum}
+              totalInView={totalInView}
+              offerCount={offerInWindow}
+              extraLines={weekCompareLine ? [weekCompareLine] : undefined}
+              tint={palette.tint}
+              textColor={palette.text}
+              mutedColor={palette.icon}
+              surface={palette.surfaceCard}
+              borderColor={palette.borderSubtle}
+            />
+
+            {period === 'day' ? (
+              <DayHeatmapRow
+                buckets={buckets}
+                maxCount={maxC}
+                tint={palette.tint}
+                trackColor={palette.barTrack}
+                textColor={palette.text}
+                mutedColor={palette.icon}
+              />
+            ) : null}
+
+            <InsightStatusPills
+              slices={statusSlices}
+              totalInWindow={filteredRows.length}
+              textColor={palette.text}
+              mutedColor={palette.icon}
+              trackColor={palette.surfaceMuted}
+            />
+
             <ThemedText type="defaultSemiBold" style={styles.sectionHead}>
-              1 · Quick numbers ({sectionTitle(period)})
+              Quick numbers ({sectionTitle(period)})
             </ThemedText>
             <ThemedText style={[styles.caption, { color: palette.icon }]}>
               Three bright tiles: how many applications fall in this view, your full library size, and the average primary
@@ -295,7 +405,7 @@ export default function InsightsScreen() {
             />
 
             <ThemedText type="defaultSemiBold" style={styles.sectionHead}>
-              2 · Colour bar chart (applications per {bucketUnitPhrase(period)})
+              Bar chart — applications per {bucketUnitPhrase(period)}
             </ThemedText>
             <ThemedText style={[styles.caption, { color: palette.icon }]}>
               Each bar is a time bucket; height is how many applications you logged with that applied date.
@@ -311,7 +421,7 @@ export default function InsightsScreen() {
             />
 
             <ThemedText type="defaultSemiBold" style={styles.sectionHead}>
-              3 · Line chart (same timeline)
+              Line chart — same timeline
             </ThemedText>
             <ThemedText style={[styles.caption, { color: palette.icon }]}>
               Connects the same counts as the bars so you can spot spikes at a glance.
@@ -328,8 +438,17 @@ export default function InsightsScreen() {
               accessibilitySummary={a11yLine}
             />
 
+            <MeanMetricMicroChart
+              buckets={meanMetricBuckets}
+              tint={palette.tint}
+              trackColor={palette.barTrack}
+              textColor={palette.text}
+              mutedColor={palette.icon}
+              bucketUnitPhrase={bucketUnitPhrase(period)}
+            />
+
             <ThemedText type="defaultSemiBold" style={styles.sectionHead}>
-              4 · Donut chart (status mix in this view)
+              Donut chart — status mix in this view
             </ThemedText>
             <ThemedText style={[styles.caption, { color: palette.icon }]}>
               Slice sizes follow how many in-window applications have each current status.
@@ -343,7 +462,7 @@ export default function InsightsScreen() {
             />
 
             <ThemedText type="defaultSemiBold" style={styles.sectionHead}>
-              5 · Category rainbow strip
+              Category rainbow strip
             </ThemedText>
             <ThemedText style={[styles.caption, { color: palette.icon }]}>
               Width of each colour is the share of applications in each category (uses your saved category colours).
@@ -357,7 +476,7 @@ export default function InsightsScreen() {
             />
 
             <ThemedText type="defaultSemiBold" style={styles.sectionHead}>
-              6 · Average metric by status
+              Average metric by status
             </ThemedText>
             <ThemedText style={[styles.caption, { color: palette.icon }]}>
               Horizontal bars compare typical metric size (hours, stages, etc.) for each status in this period.
@@ -399,9 +518,4 @@ const styles = StyleSheet.create({
   sectionHead: { marginTop: 10, fontSize: 16 },
   caption: { fontSize: 13, lineHeight: 18 },
   footer: { fontSize: 13, marginTop: 8 },
-  streakCard: { borderWidth: 1, borderRadius: 14, padding: 12 },
-  streakRow: { flexDirection: 'row', gap: 12 },
-  streakTile: { flex: 1, borderRadius: 12, paddingVertical: 10, paddingHorizontal: 10 },
-  streakNum: { fontSize: 28, fontWeight: '900' },
-  streakLab: { marginTop: 4, fontSize: 13, fontWeight: '700' },
 });

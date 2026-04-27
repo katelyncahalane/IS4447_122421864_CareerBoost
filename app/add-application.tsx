@@ -6,6 +6,7 @@ import {
   ActivityIndicator,
   Alert,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -15,20 +16,19 @@ import {
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import FormField from '@/components/ui/form-field';
-import { Colors } from '@/constants/theme';
 import { db } from '@/db/client';
 import { applicationStatusLogs, applications, categories } from '@/db/schema';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useThemePalette } from '@/hooks/use-theme-palette';
 import type { ApplicationFormErrors } from '@/lib/validate-application-form';
+import type { ApplicationStatus } from '@/lib/application-statuses';
+import { APPLICATION_STATUSES } from '@/lib/application-statuses';
+import { loadPrefsAndSyncReminders } from '@/lib/local-reminders';
 import { validateApplicationForm } from '@/lib/validate-application-form';
 import { asc } from 'drizzle-orm';
 import { Stack, useRouter } from 'expo-router';
 
 // types – one row from categories table for the picker
 type CategoryRow = { id: number; name: string; color: string; icon: string };
-
-// constants – allowed status labels (must match what you store in sqlite)
-const STATUSES = ['Applied', 'Screening', 'Interview', 'Offer', 'Rejected'] as const;
 
 // helper – today as yyyy-mm-dd (local date, good enough for coursework)
 function isoToday(): string {
@@ -42,8 +42,7 @@ function isoToday(): string {
 // screen – form + save + category modal
 export default function AddApplicationScreen() {
   const router = useRouter();
-  const colorScheme = useColorScheme() ?? 'light';
-  const palette = Colors[colorScheme];
+  const palette = useThemePalette();
 
   // state – categories list + modal + form fields
   const [loadingCats, setLoadingCats] = useState(true);
@@ -55,7 +54,7 @@ export default function AddApplicationScreen() {
   const [appliedDate, setAppliedDate] = useState(isoToday());
   const [metricValue, setMetricValue] = useState('1');
   const [notes, setNotes] = useState('');
-  const [status, setStatus] = useState<(typeof STATUSES)[number]>('Applied');
+  const [status, setStatus] = useState<ApplicationStatus>('Applied');
 
   const [categoryId, setCategoryId] = useState<number | null>(null);
 
@@ -142,6 +141,9 @@ export default function AddApplicationScreen() {
           createdAt: now,
         });
       }
+      if (Platform.OS !== 'web') {
+        void loadPrefsAndSyncReminders().catch(() => {});
+      }
       router.back();
     } catch (e) {
       Alert.alert('Save failed', e instanceof Error ? e.message : 'Unknown error');
@@ -151,7 +153,7 @@ export default function AddApplicationScreen() {
   // render – scroll form + slide-up category chooser
   return (
     <ThemedView style={styles.flex}>
-      <Stack.Screen options={{ title: 'Add application' }} />
+      <Stack.Screen options={{ title: 'Add record' }} />
       <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
         {loadingCats ? (
           <View style={styles.centeredRow}>
@@ -159,6 +161,25 @@ export default function AddApplicationScreen() {
             <ThemedText style={styles.muted}>Loading categories…</ThemedText>
           </View>
         ) : null}
+
+        <View style={[styles.storyCard, { borderColor: palette.borderSubtle, backgroundColor: palette.surfaceMuted }]}>
+          <ThemedText type="defaultSemiBold">What goes in a record</ThemedText>
+          <ThemedText style={[styles.storyLead, { color: palette.icon }]}>
+            Required: date applied, one primary metric (a whole number — duration like minutes or hours, or a count), and a
+            category. Optional: notes. Company, role, and status describe the application itself.
+          </ThemedText>
+          <View style={styles.storyList}>
+            <ThemedText style={[styles.storyItem, { color: palette.text }]}>
+              · Metric examples: 45 (minutes on the application), 2 (follow-ups logged), 8 (prep hours).
+            </ThemedText>
+            <ThemedText style={[styles.storyItem, { color: palette.text }]}>
+              · Category is required so every stored row can drive charts and filters consistently.
+            </ThemedText>
+            <ThemedText style={[styles.storyItem, { color: palette.text }]}>
+              · Set the starting pipeline status; extend history anytime from Edit.
+            </ThemedText>
+          </View>
+        </View>
 
         <FormField
           label="Company"
@@ -183,7 +204,8 @@ export default function AddApplicationScreen() {
           errorText={fieldErrors.role}
         />
         <FormField
-          label="Applied date (YYYY-MM-DD)"
+          label="Date applied (YYYY-MM-DD)"
+          hint="Required. Use the calendar day you sent the application (used for timelines and streaks)."
           value={appliedDate}
           onChangeText={(v) => {
             setAppliedDate(v);
@@ -195,20 +217,24 @@ export default function AddApplicationScreen() {
           errorText={fieldErrors.appliedDate}
         />
         <FormField
-          label="Metric value"
+          label="Primary metric"
+          hint="Required. One positive whole number — interpret as duration (e.g. minutes) or a count (e.g. stages), whichever you track for this application."
           value={metricValue}
           onChangeText={(v) => {
             setMetricValue(v);
             setFieldErrors((e) => ({ ...e, metricValue: undefined }));
           }}
-          placeholder="e.g. 1"
+          placeholder="e.g. 30 or 1"
           keyboardType="numeric"
           autoCapitalize="none"
           errorText={fieldErrors.metricValue}
         />
 
         <View style={styles.fieldBlock}>
-          <ThemedText type="defaultSemiBold">Category</ThemedText>
+          <ThemedText type="defaultSemiBold">Category (required)</ThemedText>
+          <ThemedText style={[styles.fieldHint, { color: palette.icon }]}>
+            Choose how this record is grouped for insights (you can change it later).
+          </ThemedText>
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Select category"
@@ -231,7 +257,7 @@ export default function AddApplicationScreen() {
         <View style={styles.fieldBlock}>
           <ThemedText type="defaultSemiBold">Status</ThemedText>
           <View style={styles.statusRow}>
-            {STATUSES.map((s) => {
+            {APPLICATION_STATUSES.map((s) => {
               const selected = s === status;
               return (
                 <Pressable
@@ -266,7 +292,7 @@ export default function AddApplicationScreen() {
         <View style={styles.actions}>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Save application"
+            accessibilityLabel="Save record"
             onPress={() => void onSave()}
             style={({ pressed }) => [
               styles.primaryButton,
@@ -340,6 +366,11 @@ export default function AddApplicationScreen() {
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   body: { padding: 16, gap: 14 },
+  storyCard: { borderWidth: 1, borderRadius: 12, padding: 12, gap: 8 },
+  storyLead: { fontSize: 14, lineHeight: 20, fontWeight: '500' },
+  storyList: { flexDirection: 'column', gap: 6 },
+  storyItem: { fontSize: 14, lineHeight: 20, fontWeight: '600' },
+  fieldHint: { fontSize: 13, lineHeight: 18, fontWeight: '500' },
   centeredRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   muted: { opacity: 0.8 },
   errorText: { color: '#c00', fontSize: 13 },
