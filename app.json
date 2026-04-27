@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "IS4447_122421864",
-    "slug": "IS4447_122421864",
+    "name": "CareerBoost",
+    "slug": "careerboost",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "is4447122421864",
+    "scheme": "careerboost",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {

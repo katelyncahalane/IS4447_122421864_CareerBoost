@@ -184,7 +184,7 @@ export default function JobApplicationScreen() {
     <ThemedView style={styles.flex}>
       <HeroBanner
         colorScheme={colorScheme}
-        eyebrow="CareerBoost · IS4447"
+        eyebrow="CareerBoost · local-only"
         title="Applications"
       />
       <View style={styles.body}>
