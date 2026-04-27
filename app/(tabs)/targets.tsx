@@ -31,7 +31,28 @@ type TargetListRow = {
   statusLabel: string;
   barFraction: number;
   barColour: string;
+  isCurrentPeriod: boolean;
 };
+
+/** yyyy-mm-dd from local calendar parts */
+function toIsoDate(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function currentWeekStartIso(now: Date = new Date()): string {
+  const d = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const day = d.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  d.setDate(d.getDate() + diff);
+  return toIsoDate(d);
+}
+
+function currentMonthStartIso(now: Date = new Date()): string {
+  return toIsoDate(new Date(now.getFullYear(), now.getMonth(), 1));
+}
 
 // screen
 export default function TargetsScreen() {
@@ -52,6 +73,8 @@ export default function TargetsScreen() {
         db.select({ id: categories.id, name: categories.name }).from(categories),
       ]);
 
+      const wk = currentWeekStartIso();
+      const mo = currentMonthStartIso();
       const catName = Object.fromEntries(catRows.map((c) => [c.id, c.name])) as Record<number, string>;
 
       const next: TargetListRow[] = tRows.map((t) => {
@@ -83,6 +106,9 @@ export default function TargetsScreen() {
         }
 
         const barFraction = t.goalCount > 0 ? Math.min(1, current / t.goalCount) : 0;
+        const isCurrentPeriod =
+          (t.periodType === 'week' && t.periodStart === wk) ||
+          (t.periodType === 'month' && t.periodStart === mo);
 
         return {
           id: t.id,
@@ -93,10 +119,15 @@ export default function TargetsScreen() {
           statusLabel,
           barFraction,
           barColour,
+          isCurrentPeriod,
         };
       });
 
-      setRows(next);
+      // show current period goals first (simple but feels “smart”)
+      const sorted = [...next].sort((a, b) =>
+        a.isCurrentPeriod === b.isCurrentPeriod ? 0 : a.isCurrentPeriod ? -1 : 1,
+      );
+      setRows(sorted);
     } finally {
       setLoading(false);
     }
@@ -113,9 +144,17 @@ export default function TargetsScreen() {
   );
 
   const headerNote = useMemo(
-    () => 'Progress is counted from saved application dates in the matching week or month.',
+    () =>
+      `This week starts ${currentWeekStartIso()} · this month starts ${currentMonthStartIso()}. Progress is counted from saved application dates in the matching week or month.`,
     [],
   );
+
+  const summary = useMemo(() => {
+    if (rows.length === 0) return null;
+    const current = rows.filter((r) => r.isCurrentPeriod);
+    const met = current.filter((r) => r.currentCount >= r.goalCount).length;
+    return { currentCount: current.length, met };
+  }, [rows]);
 
   // render
   if (loading) {
@@ -135,6 +174,21 @@ export default function TargetsScreen() {
         title="Targets"
       />
       <ThemedText style={[styles.note, { color: palette.icon }]}>{headerNote}</ThemedText>
+
+      {summary ? (
+        <View
+          style={[
+            styles.summaryCard,
+            { backgroundColor: palette.surfaceMuted, borderColor: palette.borderSubtle },
+          ]}
+          accessible
+          accessibilityLabel={`Current period targets. ${summary.met} met out of ${summary.currentCount}.`}>
+          <ThemedText type="defaultSemiBold">Current period</ThemedText>
+          <ThemedText style={styles.summaryText}>
+            {summary.met} met / {summary.currentCount} total (week + month)
+          </ThemedText>
+        </View>
+      ) : null}
 
       {rows.length === 0 ? (
         <ThemedText style={styles.empty}>No targets yet. Seed adds demo targets for charts and progress.</ThemedText>
@@ -185,6 +239,15 @@ const styles = StyleSheet.create({
   note: { paddingHorizontal: 16, marginBottom: 8, marginTop: 4, fontSize: 14, fontWeight: '500' },
   empty: { paddingHorizontal: 16, opacity: 0.85, marginBottom: 8 },
   list: { paddingHorizontal: 16, paddingBottom: 24, gap: 12 },
+  summaryCard: {
+    marginHorizontal: 16,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderRadius: 14,
+    padding: 12,
+    gap: 4,
+  },
+  summaryText: { opacity: 0.85, fontSize: 14, fontWeight: '600' },
   card: { borderWidth: 1, borderRadius: 14, padding: 14, gap: 8 },
   meta: { opacity: 0.8, fontSize: 14 },
   status: { fontSize: 15, fontWeight: '600' },
