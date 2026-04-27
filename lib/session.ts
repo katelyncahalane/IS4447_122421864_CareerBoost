@@ -1,0 +1,33 @@
+// session – AsyncStorage blob for logged-in user id + username only (passwords stay as hashes in SQLite; nothing sent to a server)
+
+// imports
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+// constant – storage key (bump suffix if you change stored shape)
+const SESSION_KEY = '@is4447/session_v1';
+
+export type Session = {
+  userId: number;
+  username: string;
+};
+
+// read – return null if missing or corrupt json
+export async function getSession(): Promise<Session | null> {
+  const raw = await AsyncStorage.getItem(SESSION_KEY);
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as Session;
+  } catch {
+    return null;
+  }
+}
+
+// write – overwrite whole session blob
+export async function setSession(session: Session): Promise<void> {
+  await AsyncStorage.setItem(SESSION_KEY, JSON.stringify(session));
+}
+
+// clear – log out helper
+export async function clearSession(): Promise<void> {
+  await AsyncStorage.removeItem(SESSION_KEY);
+}
