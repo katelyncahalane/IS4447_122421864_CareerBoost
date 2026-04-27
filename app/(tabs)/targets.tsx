@@ -11,6 +11,7 @@ import {
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { WeekMonthMiniBars } from '@/components/targets/week-month-mini-bars';
 import { HeroBanner } from '@/components/ui/hero-banner';
 import { Colors } from '@/constants/theme';
 import { db } from '@/db/client';
@@ -60,6 +61,13 @@ export default function TargetsScreen() {
   const palette = Colors[colorScheme];
   const [loading, setLoading] = useState(true);
   const [rows, setRows] = useState<TargetListRow[]>([]);
+  const [weekMonthBars, setWeekMonthBars] = useState<
+    | null
+    | {
+        week: { current: number; goal: number; color: string };
+        month: { current: number; goal: number; color: string };
+      }
+  >(null);
 
   // data – load targets + applications, then compute counts in memory (small dataset)
   const refresh = useCallback(async () => {
@@ -76,6 +84,46 @@ export default function TargetsScreen() {
       const wk = currentWeekStartIso();
       const mo = currentMonthStartIso();
       const catName = Object.fromEntries(catRows.map((c) => [c.id, c.name])) as Record<number, string>;
+
+      // Section: mini visual (global current week + current month)
+      const weekTarget = tRows.find(
+        (t) => t.scope === 'global' && t.periodType === 'week' && t.periodStart === wk,
+      );
+      const monthTarget = tRows.find(
+        (t) => t.scope === 'global' && t.periodType === 'month' && t.periodStart === mo,
+      );
+      if (weekTarget && monthTarget) {
+        const wCur = countApplicationsForTarget(appRows, {
+          scope: weekTarget.scope,
+          categoryId: weekTarget.categoryId,
+          periodType: weekTarget.periodType,
+          periodStart: weekTarget.periodStart,
+          goalCount: weekTarget.goalCount,
+        });
+        const mCur = countApplicationsForTarget(appRows, {
+          scope: monthTarget.scope,
+          categoryId: monthTarget.categoryId,
+          periodType: monthTarget.periodType,
+          periodStart: monthTarget.periodStart,
+          goalCount: monthTarget.goalCount,
+        });
+        const statusColor = (cur: number, goal: number) =>
+          cur > goal ? '#ea580c' : cur === goal ? '#16a34a' : palette.tint;
+        setWeekMonthBars({
+          week: {
+            current: wCur,
+            goal: weekTarget.goalCount,
+            color: statusColor(wCur, weekTarget.goalCount),
+          },
+          month: {
+            current: mCur,
+            goal: monthTarget.goalCount,
+            color: statusColor(mCur, monthTarget.goalCount),
+          },
+        });
+      } else {
+        setWeekMonthBars(null);
+      }
 
       const next: TargetListRow[] = tRows.map((t) => {
         const current = countApplicationsForTarget(appRows, {
@@ -187,6 +235,37 @@ export default function TargetsScreen() {
           <ThemedText style={styles.summaryText}>
             {summary.met} met / {summary.currentCount} total (week + month)
           </ThemedText>
+        </View>
+      ) : null}
+
+      {weekMonthBars ? (
+        <View
+          style={[
+            styles.summaryCard,
+            { backgroundColor: palette.surfaceMuted, borderColor: palette.borderSubtle },
+          ]}>
+          {/* Section: simple visual for targets (week vs month) */}
+          <WeekMonthMiniBars
+            title="Week vs Month (global)"
+            bars={[
+              {
+                label: 'This week',
+                current: weekMonthBars.week.current,
+                goal: weekMonthBars.week.goal,
+                color: weekMonthBars.week.color,
+              },
+              {
+                label: 'This month',
+                current: weekMonthBars.month.current,
+                goal: weekMonthBars.month.goal,
+                color: weekMonthBars.month.color,
+              },
+            ]}
+            trackColor={palette.barTrack}
+            textColor={palette.text}
+            mutedColor={palette.icon}
+            accessibilitySummary={`Week vs month progress. Week ${weekMonthBars.week.current} of ${weekMonthBars.week.goal}. Month ${weekMonthBars.month.current} of ${weekMonthBars.month.goal}.`}
+          />
         </View>
       ) : null}
 
