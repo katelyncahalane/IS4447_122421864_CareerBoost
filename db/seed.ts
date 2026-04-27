@@ -18,6 +18,31 @@ import {
   targets,
 } from '@/db/schema';
 
+/** yyyy-mm-dd from local calendar parts */
+function toIsoDate(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function daysAgoIso(now: Date, daysAgo: number): string {
+  const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - daysAgo);
+  return toIsoDate(d);
+}
+
+function monthStartIso(now: Date): string {
+  return toIsoDate(new Date(now.getFullYear(), now.getMonth(), 1));
+}
+
+function mondayStartIso(now: Date): string {
+  const d = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const day = d.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  d.setDate(d.getDate() + diff);
+  return toIsoDate(d);
+}
+
 // function – idempotent seed for markers / screenshots / charts later
 export async function seedDb(): Promise<void> {
   // helper – total row count across the four core tables
@@ -32,7 +57,8 @@ export async function seedDb(): Promise<void> {
   // guard – skip if user already has any data (avoid dup demo)
   if ((await sumCounts()) > 0) return;
 
-  const now = Date.now();
+  const nowMs = Date.now();
+  const now = new Date(nowMs);
 
   // transaction – all-or-nothing insert block
   await db.transaction(async (tx) => {
@@ -50,9 +76,11 @@ export async function seedDb(): Promise<void> {
     const insertedCategories = await tx
       .insert(categories)
       .values([
-        { name: 'Software Engineering', color: '#2563eb', icon: 'code', createdAt: now },
-        { name: 'Data / Analytics', color: '#16a34a', icon: 'chart', createdAt: now },
-        { name: 'Product / UX', color: '#a855f7', icon: 'palette', createdAt: now },
+        { name: 'Software Engineering', color: '#2563eb', icon: 'code', createdAt: nowMs },
+        { name: 'Data / Analytics', color: '#16a34a', icon: 'chart', createdAt: nowMs },
+        { name: 'Product / UX', color: '#a855f7', icon: 'palette', createdAt: nowMs },
+        { name: 'Cyber / IT Support', color: '#ea580c', icon: 'shield', createdAt: nowMs },
+        { name: 'Marketing / Content', color: '#db2777', icon: 'megaphone', createdAt: nowMs },
       ])
       .returning({ id: categories.id, name: categories.name });
 
@@ -62,64 +90,80 @@ export async function seedDb(): Promise<void> {
       number
     >;
 
-    // constants – demo week / month anchors for targets
-    const weekStart = '2026-04-21'; // monday anchor for coursework demo
-    const monthStart = '2026-04-01';
+    // anchors – current week/month for targets + “in-window” insights
+    const weekStart = mondayStartIso(now);
+    const monthStart = monthStartIso(now);
 
-    // insert – three sample applications linked to categories
-    await tx.insert(applications).values([
-      {
-        company: 'Riverbank Analytics',
-        role: 'Graduate Software Engineer',
-        appliedDate: '2026-04-22',
-        metricValue: 3,
-        categoryId: catByName['Software Engineering']!,
-        notes: 'Applied online. Completed coding exercise.',
-        status: 'Interview',
-        createdAt: now,
-      },
-      {
-        company: 'Northwind Retail',
-        role: 'Junior React Native Developer',
-        appliedDate: '2026-04-10',
-        metricValue: 2,
-        categoryId: catByName['Software Engineering']!,
-        notes: 'Recruiter screen scheduled.',
-        status: 'Applied',
-        createdAt: now,
-      },
-      {
-        company: 'Harbour Health',
-        role: 'Data Analyst Intern',
-        appliedDate: '2026-04-05',
-        metricValue: 5,
-        categoryId: catByName['Data / Analytics']!,
-        notes: 'Portfolio link included.',
-        status: 'Rejected',
-        createdAt: now,
-      },
-      // extra dates so monthly / weekly insights charts are not empty on fresh seed
-      {
-        company: 'Summit Workshops',
-        role: 'UX Intern',
-        appliedDate: '2026-03-18',
-        metricValue: 1,
-        categoryId: catByName['Product / UX']!,
-        notes: 'Short placement.',
-        status: 'Applied',
-        createdAt: now,
-      },
-      {
-        company: 'Canal Digital Labs',
-        role: 'Graduate Data Engineer',
-        appliedDate: '2026-02-11',
-        metricValue: 4,
-        categoryId: catByName['Data / Analytics']!,
-        notes: 'Take-home task.',
-        status: 'Withdrawn',
-        createdAt: now,
-      },
-    ]);
+    const statuses = ['Applied', 'Screening', 'Interview', 'Offer', 'Rejected', 'Withdrawn'] as const;
+    const catCycle = [
+      'Software Engineering',
+      'Data / Analytics',
+      'Product / UX',
+      'Cyber / IT Support',
+      'Marketing / Content',
+    ] as const;
+
+    // insert – lots of applications across day/week/month windows so all 6 visuals are always populated
+    const appRows: (typeof applications.$inferInsert)[] = [];
+
+    // daily window (last 14 days): multiple per day → obvious bar + line + status pie
+    for (let d = 0; d < 14; d++) {
+      const n = d % 4 === 0 ? 3 : d % 3 === 0 ? 2 : 1; // 1–3 per day
+      for (let k = 0; k < n; k++) {
+        const idx = d * 3 + k;
+        const catName = catCycle[idx % catCycle.length]!;
+        const status = statuses[(idx + 2) % statuses.length]!;
+        appRows.push({
+          company: `Demo Co ${String(idx + 1).padStart(2, '0')}`,
+          role: ['Junior Developer', 'Data Analyst Intern', 'UX Assistant', 'IT Support', 'Content Intern'][idx % 5]!,
+          appliedDate: daysAgoIso(now, d),
+          metricValue: 1 + ((idx * 2) % 7), // 1..7
+          categoryId: catByName[catName]!,
+          notes:
+            k === 0 && d % 2 === 0
+              ? 'Seeded demo entry for insights and charts.'
+              : null,
+          status,
+          createdAt: nowMs,
+        });
+      }
+    }
+
+    // weekly window (beyond 14 days but within ~8 weeks): ensures weekly view has shape even if daily is sparse
+    for (let w = 3; w <= 55; w += 7) {
+      const idx = 100 + w;
+      const catName = catCycle[(idx + 1) % catCycle.length]!;
+      appRows.push({
+        company: `Weekwind ${w}`,
+        role: 'Graduate Developer',
+        appliedDate: daysAgoIso(now, w),
+        metricValue: 2 + (w % 5),
+        categoryId: catByName[catName]!,
+        notes: 'Seed: weekly bucket filler.',
+        status: statuses[(w / 7) % statuses.length]!,
+        createdAt: nowMs,
+      });
+    }
+
+    // monthly spread (up to ~11 months back): guarantees monthly view always shows activity
+    for (let m = 1; m <= 11; m++) {
+      const d = new Date(now.getFullYear(), now.getMonth() - m, 1);
+      const iso = toIsoDate(d);
+      const idx = 200 + m;
+      const catName = catCycle[idx % catCycle.length]!;
+      appRows.push({
+        company: `Monthstone ${m}`,
+        role: 'Graduate Programme',
+        appliedDate: iso,
+        metricValue: 1 + (m % 7),
+        categoryId: catByName[catName]!,
+        notes: 'Seed: monthly bucket filler.',
+        status: statuses[(m + 1) % statuses.length]!,
+        createdAt: nowMs,
+      });
+    }
+
+    await tx.insert(applications).values(appRows);
 
     // query – grab ids so logs can point at the right application rows
     const apps = await tx
@@ -134,91 +178,27 @@ export async function seedDb(): Promise<void> {
       number
     >;
 
-    // insert – fake timelines for charts / history screens later
-    await tx.insert(applicationStatusLogs).values([
-      {
-        applicationId: appIdByCompany['Riverbank Analytics']!,
-        status: 'Applied',
-        note: 'Submitted application',
-        createdAt: now - 1000 * 60 * 60 * 24 * 4,
-      },
-      {
-        applicationId: appIdByCompany['Riverbank Analytics']!,
-        status: 'Screening',
-        note: 'Recruiter email received',
-        createdAt: now - 1000 * 60 * 60 * 24 * 3,
-      },
-      {
-        applicationId: appIdByCompany['Riverbank Analytics']!,
-        status: 'Interview',
-        note: 'Technical interview booked',
-        createdAt: now - 1000 * 60 * 60 * 24 * 1,
-      },
+    // insert – status timelines (each application gets at least one log; some get 2–3 for richer history)
+    const logRows: (typeof applicationStatusLogs.$inferInsert)[] = [];
+    for (const a of apps) {
+      const base = nowMs - 1000 * 60 * 60 * 2; // 2 hours ago
+      const seq =
+        a.company.startsWith('Demo Co') && Number(a.company.slice(-2)) % 5 === 0
+          ? ['Applied', 'Screening', 'Interview']
+          : a.company.startsWith('Demo Co') && Number(a.company.slice(-2)) % 4 === 0
+            ? ['Applied', 'Screening']
+            : ['Applied'];
 
-      {
-        applicationId: appIdByCompany['Northwind Retail']!,
-        status: 'Applied',
-        note: 'Applied via LinkedIn Easy Apply',
-        createdAt: now - 1000 * 60 * 60 * 24 * 12,
-      },
-      {
-        applicationId: appIdByCompany['Northwind Retail']!,
-        status: 'Applied',
-        note: 'Follow-up email sent',
-        createdAt: now - 1000 * 60 * 60 * 24 * 10,
-      },
-
-      {
-        applicationId: appIdByCompany['Harbour Health']!,
-        status: 'Applied',
-        note: 'Submitted CV + cover letter',
-        createdAt: now - 1000 * 60 * 60 * 24 * 18,
-      },
-      {
-        applicationId: appIdByCompany['Harbour Health']!,
-        status: 'Interview',
-        note: 'Hiring manager interview',
-        createdAt: now - 1000 * 60 * 60 * 24 * 14,
-      },
-      {
-        applicationId: appIdByCompany['Harbour Health']!,
-        status: 'Rejected',
-        note: 'Role filled internally',
-        createdAt: now - 1000 * 60 * 60 * 24 * 8,
-      },
-
-      {
-        applicationId: appIdByCompany['Summit Workshops']!,
-        status: 'Applied',
-        note: 'Speculative email to hiring lead',
-        createdAt: now - 1000 * 60 * 60 * 24 * 3,
-      },
-      {
-        applicationId: appIdByCompany['Summit Workshops']!,
-        status: 'Screening',
-        note: 'Portfolio link requested',
-        createdAt: now - 1000 * 60 * 60 * 24 * 1,
-      },
-
-      {
-        applicationId: appIdByCompany['Canal Digital Labs']!,
-        status: 'Applied',
-        note: 'Applied on company careers site',
-        createdAt: now - 1000 * 60 * 60 * 24 * 9,
-      },
-      {
-        applicationId: appIdByCompany['Canal Digital Labs']!,
-        status: 'Interview',
-        note: 'Phone screen with team lead',
-        createdAt: now - 1000 * 60 * 60 * 24 * 4,
-      },
-      {
-        applicationId: appIdByCompany['Canal Digital Labs']!,
-        status: 'Withdrawn',
-        note: 'Accepted another offer',
-        createdAt: now - 1000 * 60 * 60 * 24 * 2,
-      },
-    ]);
+      for (let i = 0; i < seq.length; i++) {
+        logRows.push({
+          applicationId: a.id,
+          status: seq[i]!,
+          note: i === 0 ? 'Seed: submitted application' : i === 1 ? 'Seed: recruiter screen' : 'Seed: interview booked',
+          createdAt: base - i * 1000 * 60 * 60 * 24,
+        });
+      }
+    }
+    await tx.insert(applicationStatusLogs).values(logRows);
 
     // insert – sample targets (global + per category)
     await tx.insert(targets).values([
@@ -227,32 +207,48 @@ export async function seedDb(): Promise<void> {
         categoryId: null,
         periodType: 'week',
         periodStart: weekStart,
-        goalCount: 6,
-        createdAt: now,
+        goalCount: 10,
+        createdAt: nowMs,
       },
       {
         scope: 'global',
         categoryId: null,
         periodType: 'month',
         periodStart: monthStart,
-        goalCount: 18,
-        createdAt: now,
+        goalCount: 40,
+        createdAt: nowMs,
       },
       {
         scope: 'category',
         categoryId: catByName['Software Engineering']!,
         periodType: 'week',
         periodStart: weekStart,
-        goalCount: 4,
-        createdAt: now,
+        goalCount: 5,
+        createdAt: nowMs,
       },
       {
         scope: 'category',
         categoryId: catByName['Data / Analytics']!,
         periodType: 'month',
         periodStart: monthStart,
-        goalCount: 5,
-        createdAt: now,
+        goalCount: 8,
+        createdAt: nowMs,
+      },
+      {
+        scope: 'category',
+        categoryId: catByName['Product / UX']!,
+        periodType: 'month',
+        periodStart: monthStart,
+        goalCount: 6,
+        createdAt: nowMs,
+      },
+      {
+        scope: 'category',
+        categoryId: catByName['Cyber / IT Support']!,
+        periodType: 'week',
+        periodStart: weekStart,
+        goalCount: 3,
+        createdAt: nowMs,
       },
     ]);
   });

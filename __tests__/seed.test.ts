@@ -35,14 +35,23 @@ jest.mock('@/db/client', () => {
   };
 
   const db = {
-    select: (_shape?: unknown) => ({
-      from: async (table: unknown) => [{ c: state[tableNameFromLocal(table)].length }],
+    select: (shape?: any) => ({
+      from: async (table: unknown) => {
+        const name = tableNameFromLocal(table);
+        // seed.ts needs to read back { id, company } from applications to create status logs
+        if (shape && name === 'applications' && 'id' in shape && 'company' in shape) {
+          return state.applications.map((r) => ({ id: r.id as number, company: r.company as string }));
+        }
+        // default: count-style helper used by seed guards + tests
+        return [{ c: state[name].length }];
+      },
     }),
 
     insert: (table: unknown) => ({
       values: (rows: Row | Row[]) => {
         const name = tableNameFromLocal(table);
         const arr = Array.isArray(rows) ? rows : [rows];
+        const startIdx = state[name].length;
         for (const r of arr) {
           state[name].push({ id: nextId[name]++, ...r });
         }
@@ -52,8 +61,11 @@ jest.mock('@/db/client', () => {
               return state.categories.map((r) => ({ id: r.id as number, name: r.name as string }));
             }
             if (shape && name === 'applications') {
-              const last = state.applications[state.applications.length - 1];
-              return last ? [{ id: last.id as number }] : [];
+              const inserted = state.applications.slice(startIdx);
+              return inserted.map((r) => ({
+                id: r.id as number,
+                company: r.company as string,
+              }));
             }
             return [];
           },
