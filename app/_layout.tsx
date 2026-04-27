@@ -118,7 +118,7 @@ function RootLayoutInner() {
         }}
         accessibilityRole="alert"
         accessibilityLiveRegion="polite"
-        accessibilityLabel={`Database migration failed. ${error.message}`}>
+        accessibilityLabel="Could not update your saved data on this device. Try closing the app or reinstalling if the problem continues.">
         <View
           style={{
             maxWidth: 400,
@@ -130,13 +130,13 @@ function RootLayoutInner() {
             backgroundColor: palette.errorSurface,
           }}>
           <Text style={{ color: palette.errorText, fontWeight: '800', fontSize: 18, marginBottom: 8 }}>
-            Could not prepare your database
+            Could not prepare your saved data
           </Text>
           <Text style={{ color: palette.text, fontSize: 15, lineHeight: 22, fontWeight: '500' }}>
-            {error.message}
+            {__DEV__ ? error.message : 'Something went wrong while updating storage on this device.'}
           </Text>
           <Text style={{ color: palette.icon, fontSize: 13, marginTop: 12, lineHeight: 18, fontWeight: '500' }}>
-            Try closing and reopening the app. If this persists, reinstall to reset local SQLite migrations.
+            Try closing and reopening the app. If this persists, reinstalling the app usually fixes it.
           </Text>
         </View>
       </View>
@@ -154,13 +154,13 @@ function RootLayoutInner() {
           padding: 20,
           backgroundColor: palette.background,
         }}
-        accessibilityLabel="Preparing local SQLite database">
+        accessibilityLabel="Preparing your saved data on this device">
         <ActivityIndicator size="large" color={palette.tint} accessibilityLabel="Loading" />
         <Text style={{ marginTop: 14, color: palette.text, fontSize: 16, fontWeight: '600', textAlign: 'center' }}>
-          Preparing local SQLite database…
+          Preparing your saved data…
         </Text>
         <Text style={{ marginTop: 8, color: palette.icon, fontSize: 14, textAlign: 'center', maxWidth: 320 }}>
-          Applying schema updates. Your data stays on this device.
+          Finishing setup. Your data stays on this device.
         </Text>
       </View>
     );

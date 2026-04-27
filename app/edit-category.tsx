@@ -135,7 +135,7 @@ export default function EditCategoryScreen() {
         <View style={[styles.storyCard, { borderColor: palette.borderSubtle, backgroundColor: palette.surfaceMuted }]}>
           <ThemedText type="defaultSemiBold">Editing categories</ThemedText>
           <ThemedText style={[styles.storyLead, { color: palette.icon }]}>
-            Name, colour, and icon label stay in SQLite and show on every record that references this category. You
+            Name, colour, and icon label are saved on this device and show on every record that uses this category. You
             cannot delete a category while any record still uses it, reassign records on the tracker first.
           </ThemedText>
         </View>

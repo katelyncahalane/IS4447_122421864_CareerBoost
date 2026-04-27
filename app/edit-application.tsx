@@ -306,7 +306,7 @@ export default function EditApplicationScreen() {
                 opacity: pressed ? 0.7 : 1,
               },
             ]}>
-            <ThemedText>{selectedCategory ? selectedCategory.name : 'Select…'}</ThemedText>
+            <ThemedText>{selectedCategory ? selectedCategory.name : 'Select category'}</ThemedText>
           </Pressable>
           {fieldErrors.category ? <ThemedText style={styles.errorText}>{fieldErrors.category}</ThemedText> : null}
         </View>

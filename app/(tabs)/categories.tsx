@@ -148,8 +148,9 @@ export default function CategoriesScreen() {
                 accessibilityElementsHidden
               />
               <View style={styles.cardText}>
-                <ThemedText type="defaultSemiBold">{item.name}</ThemedText>
-                <ThemedText style={styles.meta}>Icon: {item.icon}</ThemedText>
+                <ThemedText type="defaultSemiBold" numberOfLines={2}>
+                  {item.name}
+                </ThemedText>
               </View>
             </View>
           </Pressable>
@@ -198,6 +199,5 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     borderWidth: Platform.OS === 'web' ? 1 : 2,
   },
-  cardText: { flex: 1, gap: 4 },
-  meta: { opacity: 0.8, fontSize: 14 },
+  cardText: { flex: 1, justifyContent: 'center' },
 });

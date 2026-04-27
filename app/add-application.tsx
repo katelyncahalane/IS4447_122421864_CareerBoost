@@ -244,7 +244,7 @@ export default function AddApplicationScreen() {
               },
             ]}>
             <ThemedText>
-              {selectedCategory ? selectedCategory.name : cats.length ? 'Select…' : 'No categories yet'}
+              {selectedCategory ? selectedCategory.name : cats.length ? 'Select category' : 'No categories yet'}
             </ThemedText>
           </Pressable>
           {fieldErrors.category ? <ThemedText style={styles.errorText}>{fieldErrors.category}</ThemedText> : null}

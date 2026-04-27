@@ -1,7 +1,7 @@
-// Export all stored applications to CSV; save under documents / cache and open share sheet (native) or download (web)
+// Export all stored applications to CSV, save on device, then share (native) or download (web).
 
 import { desc, eq } from 'drizzle-orm';
-import { File, Paths } from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { Platform } from 'react-native';
 
@@ -17,7 +17,7 @@ function exportFilename(): string {
   return `careerboost-applications-${stamp}.csv`;
 }
 
-export async function loadAllApplicationsForCsv(): Promise<ApplicationCsvRow[]> {
+async function loadAllRows(): Promise<ApplicationCsvRow[]> {
   return db
     .select({
       id: applications.id,
@@ -37,7 +37,7 @@ export async function loadAllApplicationsForCsv(): Promise<ApplicationCsvRow[]> 
 
 function triggerWebDownload(csv: string, filename: string): void {
   if (typeof document === 'undefined') {
-    throw new Error('Download is only available in a browser.');
+    throw new Error('Download needs a browser.');
   }
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
   const url = URL.createObjectURL(blob);
@@ -56,7 +56,7 @@ function triggerWebDownload(csv: string, filename: string): void {
  * system share sheet on iOS/Android, or triggers a browser download on web.
  */
 export async function exportAndShareApplicationsCsv(): Promise<{ rowCount: number }> {
-  const rows = await loadAllApplicationsForCsv();
+  const rows = await loadAllRows();
   const csv = rowsToCsvString(rows);
   const filename = exportFilename();
 
@@ -65,23 +65,35 @@ export async function exportAndShareApplicationsCsv(): Promise<{ rowCount: numbe
     return { rowCount: rows.length };
   }
 
-  const out = new File(Paths.document, filename);
-  out.create({ overwrite: true });
-  out.write(csv, { encoding: 'utf8' });
+  const base = FileSystem.documentDirectory;
+  if (!base) {
+    throw new Error('This device did not expose a save folder, try again or update the app.');
+  }
+
+  const fileUri = `${base}${filename}`;
+  await FileSystem.writeAsStringAsync(fileUri, csv, {
+    encoding: FileSystem.EncodingType.UTF8,
+  });
+
+  let shareUri = fileUri;
+  if (Platform.OS === 'android') {
+    try {
+      shareUri = await FileSystem.getContentUriAsync(fileUri);
+    } catch {
+      shareUri = fileUri;
+    }
+  }
 
   const canShare = await Sharing.isAvailableAsync();
   if (!canShare) {
-    throw new Error('Sharing is not available on this device. The file was saved in app storage.');
+    throw new Error(
+      'Sharing is not available here, the file was still saved in app storage. Open your Files app and look in this app’s documents for the new CSV.',
+    );
   }
-
-  const shareUri =
-    Platform.OS === 'android' && typeof out.contentUri === 'string' && out.contentUri.length > 0
-      ? out.contentUri
-      : out.uri;
 
   await Sharing.shareAsync(shareUri, {
     mimeType: 'text/csv',
-    dialogTitle: 'Export applications',
+    dialogTitle: 'Export records',
     UTI: 'public.comma-separated-values-text',
   });
   return { rowCount: rows.length };

@@ -322,7 +322,7 @@ export default function InsightsScreen() {
             icon="alert-circle-outline"
             title="Could not load insights"
             message={loadError}
-            accessibilityHint="Pull down to retry loading from your local database."
+            accessibilityHint="Pull down to reload charts and totals from your saved records."
             tint={palette.errorText}
             surface={palette.errorSurface}
             border={palette.errorBorder}

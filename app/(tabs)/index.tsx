@@ -282,8 +282,8 @@ export default function JobApplicationScreen() {
         if (exportBannerTimerRef.current) clearTimeout(exportBannerTimerRef.current);
         setExportBanner(
           rowCount === 0
-            ? 'CSV ready (header only, no applications saved yet).'
-            : `CSV ready, ${rowCount} application${rowCount === 1 ? '' : 's'} exported.`,
+            ? 'Export ready, file has headers only because no applications are saved yet.'
+            : `Export ready, ${rowCount} application${rowCount === 1 ? '' : 's'} in your file.`,
         );
         exportBannerTimerRef.current = setTimeout(() => {
           setExportBanner(null);
@@ -291,8 +291,10 @@ export default function JobApplicationScreen() {
         }, 5000);
       } catch (err) {
         Alert.alert(
-          'Export failed',
-          err instanceof Error ? err.message : 'Could not create or share the CSV file.',
+          'Export did not finish',
+          err instanceof Error
+            ? err.message
+            : 'Could not create or share your file, please try again.',
         );
       } finally {
         setExportBusy(false);
@@ -383,22 +385,6 @@ export default function JobApplicationScreen() {
               <ThemedText style={[styles.addText, { color: palette.tint }]}>Add</ThemedText>
             </Pressable>
             <Pressable
-              onPress={onExportCsv}
-              disabled={exportBusy}
-              accessibilityRole="button"
-              accessibilityLabel="Export all saved applications as a CSV file"
-              accessibilityHint="Creates a spreadsheet file with every stored application, not only the filtered list. Opens share or download."
-              accessibilityState={{ busy: exportBusy }}
-              style={({ pressed }) => [
-                styles.iconButton,
-                {
-                  borderColor: palette.tint,
-                  opacity: exportBusy ? 0.5 : pressed ? 0.75 : 1,
-                },
-              ]}>
-              <Ionicons name="download-outline" size={22} color={palette.tint} />
-            </Pressable>
-            <Pressable
               onPress={toggleColorScheme}
               accessibilityRole="button"
               accessibilityLabel={
@@ -475,16 +461,6 @@ export default function JobApplicationScreen() {
           </ThemedText>
         </View>
 
-        {exportBanner ? (
-          <View
-            style={[styles.exportBanner, { borderColor: palette.borderSubtle, backgroundColor: palette.surfaceMuted }]}
-            accessibilityRole="text"
-            accessibilityLabel={exportBanner}>
-            <Ionicons name="checkmark-circle-outline" size={18} color={palette.tint} accessibilityElementsHidden />
-            <ThemedText style={[styles.exportBannerText, { color: palette.text }]}>{exportBanner}</ThemedText>
-          </View>
-        ) : null}
-
         <View style={styles.statBlock}>
           <StatStrip
             palette={palette}
@@ -519,7 +495,7 @@ export default function JobApplicationScreen() {
                 Search and filters
               </ThemedText>
               <ThemedText style={[styles.filterKicker, { color: palette.icon }]}>
-                All matching runs in SQLite, text, dates, category, pipeline status, metric range, and notes.
+                Matching uses your saved records, text, dates, category, pipeline status, metric range, and notes.
               </ThemedText>
             </View>
             {hasActiveFilters ? (
@@ -870,6 +846,45 @@ export default function JobApplicationScreen() {
 
       </View>
 
+      <View style={styles.applicationsSectionHead}>
+        <ThemedText type="defaultSemiBold" style={[styles.applicationsTitle, { color: palette.text }]}>
+          Job applications
+        </ThemedText>
+        <Pressable
+          onPress={onExportCsv}
+          disabled={exportBusy}
+          accessibilityRole="button"
+          accessibilityLabel="Export all saved applications as CSV"
+          accessibilityHint="Creates one file with every stored application, not only the filtered list, then opens share or download."
+          accessibilityState={{ busy: exportBusy }}
+          style={({ pressed }) => [
+            styles.exportCsvBtn,
+            {
+              borderColor: palette.tint,
+              opacity: exportBusy ? 0.55 : pressed ? 0.85 : 1,
+            },
+          ]}>
+          {exportBusy ? (
+            <ActivityIndicator size="small" color={palette.tint} accessibilityElementsHidden />
+          ) : (
+            <Ionicons name="download-outline" size={18} color={palette.tint} accessibilityElementsHidden />
+          )}
+          <ThemedText style={[styles.exportCsvBtnText, { color: palette.tint }]}>
+            {exportBusy ? 'Working' : 'Export CSV'}
+          </ThemedText>
+        </Pressable>
+      </View>
+
+      {exportBanner ? (
+        <View
+          style={[styles.exportBanner, { borderColor: palette.borderSubtle, backgroundColor: palette.surfaceMuted }]}
+          accessibilityRole="text"
+          accessibilityLabel={exportBanner}>
+          <Ionicons name="checkmark-circle-outline" size={18} color={palette.tint} accessibilityElementsHidden />
+          <ThemedText style={[styles.exportBannerText, { color: palette.text }]}>{exportBanner}</ThemedText>
+        </View>
+      ) : null}
+
       <FlatList
         style={styles.listFlex}
         data={rows}
@@ -997,6 +1012,26 @@ const styles = StyleSheet.create({
   clearDates: { alignSelf: 'flex-start', paddingVertical: 4 },
   clearDatesText: { fontWeight: '600', fontSize: 14 },
   statBlock: { marginBottom: 6 },
+  applicationsSectionHead: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+    marginTop: 6,
+    marginBottom: 2,
+  },
+  applicationsTitle: { fontSize: 17, flexShrink: 1 },
+  exportCsvBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  exportCsvBtnText: { fontWeight: '700', fontSize: 14 },
   topRow: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
@@ -1023,7 +1058,8 @@ const styles = StyleSheet.create({
   themeMatchText: { fontWeight: '700', fontSize: 13 },
   exportBanner: {
     flexDirection: 'row',
-    alignItems: 'center',
+    flexWrap: 'wrap',
+    alignItems: 'flex-start',
     gap: 8,
     paddingVertical: 10,
     paddingHorizontal: 12,
@@ -1031,11 +1067,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     marginBottom: 6,
   },
-  exportBannerText: { flex: 1, fontSize: 14, fontWeight: '600' },
+  exportBannerText: { flex: 1, flexBasis: 200, minWidth: 0, fontSize: 14, fontWeight: '600' },
   topActions: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 8,
     alignItems: 'center',
+    justifyContent: 'flex-end',
     paddingVertical: 4,
     paddingRight: 4,
   },
