@@ -1,5 +1,6 @@
-// Unit tests — seedDb inserts sample data into all **core tracker** tables (CareerBoost: applications, not habits/trips):
-// categories, applications, application_status_logs, targets. Idempotent second run must not duplicate rows.
+// Unit tests (rubric testing item 10) — seedDb inserts sample data into all core tables:
+// categories, applications (primary job records), application_status_logs, targets.
+// Covers idempotency (no duplicate rows on second run) and referential consistency (FK-style checks in mock store).
 
 import { SEED_EXPECTED_APPLICATIONS_MIN, seedDb } from '@/db/seed';
 import { applicationStatusLogs, applications, categories, targets } from '@/db/schema';
@@ -115,6 +116,20 @@ describe('seedDb (unit)', () => {
     expect(catNames).toContain('Software Engineering');
     expect(seedMockTables.targets.some((r) => r.scope === 'global')).toBe(true);
     expect(seedMockTables.targets.some((r) => r.scope === 'category')).toBe(true);
+
+    const categoryIds = new Set(seedMockTables.categories.map((r) => r.id as number));
+    for (const app of seedMockTables.applications) {
+      expect(categoryIds.has(app.categoryId as number)).toBe(true);
+    }
+    const applicationIds = new Set(seedMockTables.applications.map((r) => r.id as number));
+    for (const log of seedMockTables.application_status_logs) {
+      expect(applicationIds.has(log.applicationId as number)).toBe(true);
+    }
+    for (const t of seedMockTables.targets) {
+      if (t.scope === 'category' && t.categoryId != null) {
+        expect(categoryIds.has(t.categoryId as number)).toBe(true);
+      }
+    }
   });
 
   it('does not duplicate any core table rows when seedDb runs twice on an empty store (idempotent)', async () => {

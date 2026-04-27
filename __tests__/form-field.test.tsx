@@ -59,6 +59,10 @@ describe('FormField (component)', () => {
       />,
     );
     expect(screen.getByText('Enter a positive whole number.')).toBeTruthy();
+    const input = screen.getByPlaceholderText('30');
+    expect(
+      screen.getByLabelText('Primary metric. Enter a positive whole number.'),
+    ).toBe(input);
   });
 
   it('shows error text when errorText is set', () => {
@@ -66,5 +70,8 @@ describe('FormField (component)', () => {
       <FormField label="Company" value="" onChangeText={jest.fn()} errorText="Too short." />,
     );
     expect(screen.getByText('Too short.')).toBeTruthy();
+    const input = screen.getByLabelText('Company');
+    expect(input.props.accessibilityState?.invalid).toBe(true);
+    expect(input.props.accessibilityHint).toBe('Too short.');
   });
 });

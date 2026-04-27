@@ -816,7 +816,7 @@ export default function JobApplicationScreen() {
         <ThemedText type="defaultSemiBold" style={styles.filterLabel}>
           Category
         </ThemedText>
-        <ScrollView
+      <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.chipRow}
@@ -866,7 +866,7 @@ export default function JobApplicationScreen() {
               </Pressable>
             );
           })}
-        </ScrollView>
+      </ScrollView>
 
       </View>
 

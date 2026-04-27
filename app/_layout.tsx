@@ -7,7 +7,7 @@
 // - Expo (docs): https://docs.expo.dev/ — Router: https://docs.expo.dev/router/introduction/
 // - Expo (repo): https://github.com/expo/expo
 // - React Navigation: https://reactnavigation.org/docs/getting-started — ThemeProvider / Stack: https://reactnavigation.org/docs/stack-navigator
-// - expo-notifications: https://docs.expo.dev/versions/latest/sdk/notifications/
+// - expo-notifications: https://docs.expo.dev/versions/latest/sdk/notifications/ — in Expo Go, `expo-notifications` logs a startup warning (Android remote push is not supported from SDK 53; this app uses local schedules only). Use a development build for full native behavior: https://docs.expo.dev/develop/development-builds/introduction/
 // - React Native (docs): https://reactnative.dev/docs/getting-started
 // - Video (React overview, ~100s): https://www.youtube.com/watch?v=Tn6-pxvhUWU
 // - Video (Expo channel): https://www.youtube.com/@expo.dev/videos

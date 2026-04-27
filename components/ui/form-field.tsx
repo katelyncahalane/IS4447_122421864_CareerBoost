@@ -43,13 +43,16 @@ export default function FormField({
 }: Props) {
   const palette = useThemePalette();
   const hasError = Boolean(errorText);
+  const inputAccessibilityLabel = hint ? `${label}. ${hint}` : label;
 
   // render – stack label above bordered input
   return (
     <View style={styles.container}>
-      <ThemedText type="defaultSemiBold">{label}</ThemedText>
+      <ThemedText type="defaultSemiBold" accessible={false}>
+        {label}
+      </ThemedText>
       {hint ? (
-        <ThemedText style={[styles.hint, { color: palette.icon }]} accessibilityRole="text">
+        <ThemedText style={[styles.hint, { color: palette.icon }]} accessible={false}>
           {hint}
         </ThemedText>
       ) : null}
@@ -62,8 +65,9 @@ export default function FormField({
         autoCapitalize={autoCapitalize}
         secureTextEntry={secureTextEntry}
         multiline={multiline}
-        accessibilityLabel={label}
+        accessibilityLabel={inputAccessibilityLabel}
         accessibilityHint={hasError ? errorText : undefined}
+        accessibilityState={{ invalid: hasError }}
         style={[
           styles.input,
           multiline ? styles.inputMultiline : null,

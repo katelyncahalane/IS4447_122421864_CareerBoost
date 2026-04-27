@@ -1,5 +1,5 @@
-// Integration test — main **applications** list (tracker tab): after `refresh()` loads rows from the mocked SQLite
-// layer (`db.select…innerJoin`), the UI renders company, role, applied date, metric, and category from that state.
+// Integration test (rubric testing item 10) — Tracker tab list: mimics post-migration SQLite filled with seed-shaped rows.
+// `refresh()` loads via `db.select…innerJoin`; UI must show company, role, date, metric, category, status from that state.
 
 // mocks – must sit above the screen import (jest hoists these anyway)
 jest.mock('@/hooks/use-color-scheme', () => ({
