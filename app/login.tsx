@@ -9,6 +9,7 @@ import { ThemedView } from '@/components/themed-view';
 import { HeroBanner } from '@/components/ui/hero-banner';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { loginLocalUser } from '@/lib/auth';
 import { setSession } from '@/lib/session';
 import { Link, useRouter } from 'expo-router';
 
@@ -75,9 +76,15 @@ export default function LoginScreen() {
               setError('Enter your username and password.');
               return;
             }
-            void setSession({ username: username.trim() }).then(() => {
-              router.replace('/(tabs)');
-            });
+            void (async () => {
+              try {
+                const user = await loginLocalUser({ username, password });
+                await setSession({ userId: user.id, username: user.username });
+                router.replace('/(tabs)');
+              } catch (e) {
+                setError(e instanceof Error ? e.message : 'Could not sign in.');
+              }
+            })();
           }}
           disabled={!canSubmit}
           style={({ pressed }) => [

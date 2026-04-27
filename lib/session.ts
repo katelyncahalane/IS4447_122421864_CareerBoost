@@ -1,4 +1,4 @@
-// session – tiny AsyncStorage wrapper for “logged in” username (no server; no passwords stored here)
+// session – tiny AsyncStorage wrapper for “logged in” user (no server; no passwords stored here)
 
 // imports
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -6,8 +6,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 // constant – storage key (bump suffix if you change stored shape)
 const SESSION_KEY = '@is4447/session_v1';
 
-// types – what we persist today (expand later if you add sqlite users)
 export type Session = {
+  userId: number;
   username: string;
 };
 

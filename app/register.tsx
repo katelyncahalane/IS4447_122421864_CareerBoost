@@ -12,6 +12,7 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { Link } from 'expo-router';
 import { useRouter } from 'expo-router';
 import { setSession } from '@/lib/session';
+import { registerLocalUser } from '@/lib/auth';
 
 // screen
 export default function RegisterScreen() {
@@ -110,9 +111,15 @@ export default function RegisterScreen() {
               setError('Passwords do not match.');
               return;
             }
-            void setSession({ username: username.trim() }).then(() => {
-              router.replace('/(tabs)');
-            });
+            void (async () => {
+              try {
+                const user = await registerLocalUser({ username, password });
+                await setSession({ userId: user.id, username: user.username });
+                router.replace('/(tabs)');
+              } catch (e) {
+                setError(e instanceof Error ? e.message : 'Could not create account.');
+              }
+            })();
           }}
           disabled={!canSubmit}
           style={({ pressed }) => [

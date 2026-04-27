@@ -8,6 +8,13 @@
       "when": 1777225944420,
       "tag": "0000_panoramic_leader",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1777303306803,
+      "tag": "0001_handy_valkyrie",
+      "breakpoints": true
     }
   ]
 }

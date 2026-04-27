@@ -71,3 +71,12 @@ export const targets = sqliteTable(
     categoryFk: foreignKey({ columns: [t.categoryId], foreignColumns: [categories.id] }),
   }),
 );
+
+// table – local-only auth users (passwords stored as salted hashes; no plaintext)
+export const users = sqliteTable('users', {
+  id: integer('id', { mode: 'number' }).primaryKey({ autoIncrement: true }),
+  username: text('username').notNull(),
+  passwordSalt: text('password_salt').notNull(),
+  passwordHash: text('password_hash').notNull(),
+  createdAt: integer('created_at', { mode: 'number' }).notNull(),
+});

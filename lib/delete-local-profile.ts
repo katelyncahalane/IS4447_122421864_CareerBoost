@@ -7,6 +7,7 @@ import {
   applications,
   categories,
   targets,
+  users,
 } from '@/db/schema';
 import { clearSession } from '@/lib/session';
 
@@ -20,6 +21,7 @@ export async function deleteLocalProfileData(): Promise<void> {
     await tx.delete(applications);
     await tx.delete(targets);
     await tx.delete(categories);
+    await tx.delete(users);
   });
   await clearSession();
 }
