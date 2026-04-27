@@ -26,6 +26,7 @@ import {
   maxBucketCount,
   type InsightPeriod,
 } from '@/lib/insights-aggregates';
+import { computeDailyStreaks } from '@/lib/streak';
 import { eq } from 'drizzle-orm';
 import { useFocusEffect } from '@react-navigation/native';
 
@@ -89,6 +90,9 @@ export default function InsightsScreen() {
   );
 
   const appliedDates = useMemo(() => rows.map((r) => r.appliedDate), [rows]);
+
+  // Section: streak tracking (advanced feature) – uses stored applied dates only
+  const streaks = useMemo(() => computeDailyStreaks(appliedDates), [appliedDates]);
 
   const buckets = useMemo(
     () => aggregateApplicationsByPeriod(appliedDates, period),
@@ -200,6 +204,43 @@ export default function InsightsScreen() {
             No applications in this window. Add applications with applied dates in range, or run the seed script, to see
             charts and colours here.
           </ThemedText>
+        ) : null}
+
+        {!loadError ? (
+          <>
+            <ThemedText type="defaultSemiBold" style={styles.sectionHead}>
+              Streaks (advanced feature)
+            </ThemedText>
+            <ThemedText style={[styles.caption, { color: palette.icon }]}>
+              A streak day counts when you have at least one saved application on that calendar day.
+            </ThemedText>
+            <View
+              style={[
+                styles.streakCard,
+                { backgroundColor: palette.surfaceMuted, borderColor: palette.borderSubtle },
+              ]}
+              accessible
+              accessibilityLabel={`Streaks. Current streak ${streaks.current} days. Best streak ${streaks.best} days.`}>
+              <View style={styles.streakRow}>
+                <View style={styles.streakTile}>
+                  <ThemedText style={[styles.streakNum, { color: palette.text }]}>
+                    {streaks.current}
+                  </ThemedText>
+                  <ThemedText style={[styles.streakLab, { color: palette.icon }]}>
+                    Current (days)
+                  </ThemedText>
+                </View>
+                <View style={styles.streakTile}>
+                  <ThemedText style={[styles.streakNum, { color: palette.text }]}>
+                    {streaks.best}
+                  </ThemedText>
+                  <ThemedText style={[styles.streakLab, { color: palette.icon }]}>
+                    Best (days)
+                  </ThemedText>
+                </View>
+              </View>
+            </View>
+          </>
         ) : null}
 
         {showCharts ? (
@@ -326,4 +367,9 @@ const styles = StyleSheet.create({
   empty: { opacity: 0.85, fontSize: 15, lineHeight: 22 },
   err: { color: '#b91c1c', fontSize: 15 },
   footer: { fontSize: 13, marginTop: 8 },
+  streakCard: { borderWidth: 1, borderRadius: 14, padding: 12 },
+  streakRow: { flexDirection: 'row', gap: 12 },
+  streakTile: { flex: 1, borderRadius: 12, paddingVertical: 10, paddingHorizontal: 10 },
+  streakNum: { fontSize: 28, fontWeight: '900' },
+  streakLab: { marginTop: 4, fontSize: 13, fontWeight: '700' },
 });
