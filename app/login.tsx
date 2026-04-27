@@ -22,6 +22,7 @@ export default function LoginScreen() {
   // state – simple form fields + inline error text
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // derived – disable sign-in until both fields non-empty
@@ -52,13 +53,27 @@ export default function LoginScreen() {
       />
 
       <ThemedText type="defaultSemiBold">Password</ThemedText>
+      <View style={styles.pwRow}>
+        <ThemedText style={[styles.pwHint, { color: palette.icon }]}>
+          Use the password you registered on this device.
+        </ThemedText>
+        <Pressable
+          onPress={() => setShowPassword((v) => !v)}
+          accessibilityRole="button"
+          accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
+          style={({ pressed }) => [styles.pwToggle, { opacity: pressed ? 0.7 : 1 }]}>
+          <ThemedText style={[styles.pwToggleText, { color: palette.tint }]}>
+            {showPassword ? 'Hide' : 'Show'}
+          </ThemedText>
+        </Pressable>
+      </View>
       <TextInput
         value={password}
         onChangeText={(v) => {
           setPassword(v);
           if (error) setError(null);
         }}
-        secureTextEntry
+        secureTextEntry={!showPassword}
         accessibilityLabel="Password"
         textContentType="password"
         autoComplete="password"
@@ -119,6 +134,10 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
     gap: 10,
   },
+  pwRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
+  pwHint: { flex: 1, fontSize: 13, fontWeight: '500', opacity: 0.9 },
+  pwToggle: { paddingVertical: 6, paddingHorizontal: 8, borderRadius: 8 },
+  pwToggleText: { fontSize: 14, fontWeight: '800' },
   input: {
     borderWidth: 1,
     borderRadius: 8,
