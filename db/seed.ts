@@ -106,6 +106,21 @@ export async function seedDb(): Promise<void> {
     // insert – lots of applications across day/week/month windows so all 6 visuals are always populated
     const appRows: (typeof applications.$inferInsert)[] = [];
 
+    const pretendCompanies = [
+      'Oakridge Technologies',
+      'BlueRiver Systems',
+      'Lighthouse Digital',
+      'Meadowfield Consulting',
+      'Juniper Labs',
+      'Harbourline Software',
+      'Summit Ridge Group',
+      'CanalWorks Studio',
+      'Northwind Retail',
+      'Riverbank Analytics',
+      'Greenfield Health',
+      'CedarPoint Media',
+    ] as const;
+
     // daily window (last 14 days): multiple per day → obvious bar + line + status pie
     for (let d = 0; d < 14; d++) {
       const n = d % 4 === 0 ? 3 : d % 3 === 0 ? 2 : 1; // 1–3 per day
@@ -113,8 +128,10 @@ export async function seedDb(): Promise<void> {
         const idx = d * 3 + k;
         const catName = catCycle[idx % catCycle.length]!;
         const status = statuses[(idx + 2) % statuses.length]!;
+        const companyBase = pretendCompanies[idx % pretendCompanies.length]!;
+        const seedNum = idx + 1;
         appRows.push({
-          company: `Demo Co ${String(idx + 1).padStart(2, '0')}`,
+          company: `${companyBase} #${String(seedNum).padStart(2, '0')}`,
           role: ['Junior Developer', 'Data Analyst Intern', 'UX Assistant', 'IT Support', 'Content Intern'][idx % 5]!,
           appliedDate: daysAgoIso(now, d),
           metricValue: 1 + ((idx * 2) % 7), // 1..7
@@ -130,17 +147,20 @@ export async function seedDb(): Promise<void> {
     }
 
     // weekly window (beyond 14 days but within ~8 weeks): ensures weekly view has shape even if daily is sparse
-    for (let w = 3; w <= 55; w += 7) {
-      const idx = 100 + w;
+    // Use whole-week offsets so status indexing is always an integer.
+    for (let week = 1; week <= 7; week++) {
+      const daysAgo = 14 + week * 7;
+      const idx = 100 + week;
       const catName = catCycle[(idx + 1) % catCycle.length]!;
+      const companyBase = pretendCompanies[(idx + 2) % pretendCompanies.length]!;
       appRows.push({
-        company: `Weekwind ${w}`,
+        company: `${companyBase} #W${week}`,
         role: 'Graduate Developer',
-        appliedDate: daysAgoIso(now, w),
-        metricValue: 2 + (w % 5),
+        appliedDate: daysAgoIso(now, daysAgo),
+        metricValue: 2 + (week % 5),
         categoryId: catByName[catName]!,
         notes: 'Seed: weekly bucket filler.',
-        status: statuses[(w / 7) % statuses.length]!,
+        status: statuses[week % statuses.length]!,
         createdAt: nowMs,
       });
     }
@@ -151,8 +171,9 @@ export async function seedDb(): Promise<void> {
       const iso = toIsoDate(d);
       const idx = 200 + m;
       const catName = catCycle[idx % catCycle.length]!;
+      const companyBase = pretendCompanies[(idx + 3) % pretendCompanies.length]!;
       appRows.push({
-        company: `Monthstone ${m}`,
+        company: `${companyBase} #M${String(m).padStart(2, '0')}`,
         role: 'Graduate Programme',
         appliedDate: iso,
         metricValue: 1 + (m % 7),
@@ -182,10 +203,12 @@ export async function seedDb(): Promise<void> {
     const logRows: (typeof applicationStatusLogs.$inferInsert)[] = [];
     for (const a of apps) {
       const base = nowMs - 1000 * 60 * 60 * 2; // 2 hours ago
+      const seedNumMatch = a.company.match(/#(\d{2})$/);
+      const seedNum = seedNumMatch ? Number(seedNumMatch[1]) : null;
       const seq =
-        a.company.startsWith('Demo Co') && Number(a.company.slice(-2)) % 5 === 0
+        seedNum != null && seedNum % 5 === 0
           ? ['Applied', 'Screening', 'Interview']
-          : a.company.startsWith('Demo Co') && Number(a.company.slice(-2)) % 4 === 0
+          : seedNum != null && seedNum % 4 === 0
             ? ['Applied', 'Screening']
             : ['Applied'];
 

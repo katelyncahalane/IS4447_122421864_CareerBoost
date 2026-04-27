@@ -10,6 +10,7 @@ import { HeroBanner } from '@/components/ui/hero-banner';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { loginLocalUser } from '@/lib/auth';
+import { seedDb } from '@/db/seed';
 import { setSession } from '@/lib/session';
 import { Link, useRouter } from 'expo-router';
 
@@ -95,6 +96,8 @@ export default function LoginScreen() {
               try {
                 const user = await loginLocalUser({ username, password });
                 await setSession({ userId: user.id, username: user.username });
+                // If the DB was wiped for a “fresh demo”, repopulate core tables after login.
+                await seedDb();
                 router.replace('/(tabs)');
               } catch (e) {
                 setError(e instanceof Error ? e.message : 'Could not sign in.');

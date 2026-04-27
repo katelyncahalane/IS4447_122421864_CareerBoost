@@ -13,6 +13,7 @@ import { Link } from 'expo-router';
 import { useRouter } from 'expo-router';
 import { setSession } from '@/lib/session';
 import { registerLocalUser } from '@/lib/auth';
+import { seedDb } from '@/db/seed';
 
 // screen
 export default function RegisterScreen() {
@@ -128,6 +129,8 @@ export default function RegisterScreen() {
               try {
                 const user = await registerLocalUser({ username, password });
                 await setSession({ userId: user.id, username: user.username });
+                // Populate demo data once per device/profile (idempotent).
+                await seedDb();
                 router.replace('/(tabs)');
               } catch (e) {
                 setError(e instanceof Error ? e.message : 'Could not create account.');
