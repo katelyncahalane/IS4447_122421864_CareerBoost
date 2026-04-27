@@ -13,6 +13,7 @@ import {
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { EmptyStateCard } from '@/components/ui/empty-state-card';
 import { HeroBanner } from '@/components/ui/hero-banner';
 import { Colors } from '@/constants/theme';
 import { db } from '@/db/client';
@@ -69,8 +70,11 @@ export default function CategoriesScreen() {
   // render
   if (loading) {
     return (
-      <ThemedView style={styles.centered}>
-        <ActivityIndicator size="large" color={palette.tint} />
+      <ThemedView
+        style={styles.centered}
+        accessibilityLabel="Loading categories"
+        accessibilityLiveRegion="polite">
+        <ActivityIndicator size="large" color={palette.tint} accessibilityElementsHidden />
         <ThemedText style={styles.muted}>Loading categories…</ThemedText>
       </ThemedView>
     );
@@ -82,6 +86,7 @@ export default function CategoriesScreen() {
         colorScheme={colorScheme}
         eyebrow="CareerBoost · organise"
         title="Categories"
+        tagline="Group applications by track—each category has its own colour and icon."
       />
       <View style={styles.header}>
         <ThemedText style={[styles.hint, { color: palette.icon }]}>
@@ -100,14 +105,23 @@ export default function CategoriesScreen() {
         </Pressable>
       </View>
 
-      {rows.length === 0 ? (
-        <ThemedText style={styles.empty}>No categories yet. Tap Add to create one.</ThemedText>
-      ) : null}
-
       <FlatList
+        style={styles.listFlex}
         data={rows}
         keyExtractor={(item) => String(item.id)}
-        contentContainerStyle={styles.list}
+        contentContainerStyle={[styles.list, rows.length === 0 ? styles.listEmptyGrow : null]}
+        ListEmptyComponent={
+          <EmptyStateCard
+            icon="pricetags-outline"
+            title="No categories yet"
+            message="Tap Add to create your first category. You will use it when logging applications."
+            tint={palette.tint}
+            surface={palette.surfaceCard}
+            border={palette.borderSubtle}
+            textColor={palette.text}
+            mutedColor={palette.icon}
+          />
+        }
         refreshing={loading}
         onRefresh={() => void refresh()}
         renderItem={({ item }) => (
@@ -126,7 +140,7 @@ export default function CategoriesScreen() {
               style={[
                 styles.card,
                 cardShadowStyle,
-                { borderColor: palette.borderSubtle, backgroundColor: palette.background },
+                { borderColor: palette.borderSubtle, backgroundColor: palette.surfaceCard },
               ]}>
               {/* decorative swatch: row pressable already has the accessible name */}
               <View
@@ -170,8 +184,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   addBtnText: { fontWeight: '700', fontSize: 16 },
-  empty: { paddingHorizontal: 16, opacity: 0.85, marginBottom: 8 },
+  listFlex: { flex: 1 },
   list: { paddingHorizontal: 16, paddingBottom: 24, gap: 10 },
+  listEmptyGrow: { flexGrow: 1, justifyContent: 'center', paddingVertical: 24 },
   card: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -13,18 +13,28 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 export default function TabLayout() {
   const colorScheme = useColorScheme();
 
+  const scheme = colorScheme ?? 'light';
+  const tabPalette = Colors[scheme];
+
   // render
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
+        tabBarActiveTintColor: tabPalette.tint,
+        tabBarInactiveTintColor: tabPalette.tabIconDefault,
         headerShown: false,
         tabBarButton: HapticTab,
+        tabBarStyle: {
+          backgroundColor: tabPalette.surfaceCard,
+          borderTopColor: tabPalette.borderSubtle,
+          borderTopWidth: 1,
+        },
+        tabBarLabelStyle: { fontWeight: '600', fontSize: 11 },
       }}>
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Applications',
+          title: 'Tracker',
           headerShown: true,
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="doc.text.fill" color={color} />,
         }}

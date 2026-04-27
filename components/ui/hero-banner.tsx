@@ -19,13 +19,16 @@ type HeroBannerProps = {
   eyebrow: string;
   /** Main heading for this screen. */
   title: string;
+  /** Optional supporting line under the title (branding + context). */
+  tagline?: string;
 };
 
 // component – soft diagonal gradient + accent pill (no images required for marks)
-export function HeroBanner({ colorScheme, eyebrow, title }: HeroBannerProps) {
+export function HeroBanner({ colorScheme, eyebrow, title, tagline }: HeroBannerProps) {
   const insets = useSafeAreaInsets();
   const palette = Colors[colorScheme];
   const stops = heroGradientStops(colorScheme);
+  const headerLabel = [eyebrow, title, tagline].filter(Boolean).join('. ');
 
   return (
     <LinearGradient
@@ -33,20 +36,27 @@ export function HeroBanner({ colorScheme, eyebrow, title }: HeroBannerProps) {
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
       style={[styles.gradient, { paddingTop: Math.max(insets.top, 8) + 8 }]}>
-      <View style={styles.topLine}>
-        {/* Section: brand row (logo + eyebrow) */}
-        <View style={styles.brandRow}>
-          <Image
-            source={HERO_LOGO}
-            style={styles.logo}
-            accessibilityRole="image"
-            accessibilityLabel="CareerBoost logo"
-          />
-          <View style={[styles.accentPill, { backgroundColor: palette.textOnHero }]} />
-          <Text style={[styles.eyebrow, { color: palette.heroMuted }]}>{eyebrow}</Text>
+      <View accessibilityRole="header" accessibilityLabel={headerLabel}>
+        <View style={styles.topLine}>
+          {/* Section: brand row (logo + eyebrow) */}
+          <View style={styles.brandRow}>
+            <Image
+              source={HERO_LOGO}
+              style={styles.logo}
+              accessibilityRole="image"
+              accessibilityLabel="CareerBoost logo"
+            />
+            <View style={[styles.accentPill, { backgroundColor: palette.textOnHero }]} />
+            <Text style={[styles.eyebrow, { color: palette.heroMuted }]}>{eyebrow}</Text>
+          </View>
         </View>
+        <Text style={[styles.title, { color: palette.textOnHero }]}>{title}</Text>
+        {tagline ? (
+          <Text style={[styles.tagline, { color: palette.heroMuted }]} accessibilityElementsHidden>
+            {tagline}
+          </Text>
+        ) : null}
       </View>
-      <Text style={[styles.title, { color: palette.textOnHero }]}>{title}</Text>
     </LinearGradient>
   );
 }
@@ -70,4 +80,5 @@ const styles = StyleSheet.create({
   accentPill: { width: 4, height: 22, borderRadius: 4, opacity: 0.95 },
   eyebrow: { fontSize: 13, fontWeight: '600', letterSpacing: 0.4, textTransform: 'uppercase' },
   title: { fontSize: 28, fontWeight: '800', letterSpacing: -0.5 },
+  tagline: { fontSize: 15, fontWeight: '600', marginTop: 8, lineHeight: 21, maxWidth: '100%' },
 });

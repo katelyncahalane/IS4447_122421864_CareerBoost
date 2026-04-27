@@ -3,46 +3,49 @@
 // imports
 import { Platform } from 'react-native';
 
-// colours – blue accent for coursework branding
+// colours – blue & white brand (light: crisp white + blue accents; dark: navy + blue)
 const tintColorLight = '#2563eb';
-const tintColorDark = '#fff';
+const tintColorDark = '#93c5fd';
 
 // tokens – text, background, tab icon colours per mode
 export const Colors = {
   light: {
-    text: '#11181C',
-    background: '#fff',
+    text: '#0f172a',
+    background: '#f8fafc',
     tint: tintColorLight,
-    icon: '#687076',
-    tabIconDefault: '#687076',
+    icon: '#475569',
+    tabIconDefault: '#64748b',
     tabIconSelected: tintColorLight,
-    surfaceMuted: '#f1f5f9',
-    borderSubtle: '#e2e8f0',
+    surfaceMuted: '#eff6ff',
+    /** Raised cards on page background */
+    surfaceCard: '#ffffff',
+    borderSubtle: '#dbeafe',
     barTrack: '#e2e8f0',
-    textOnHero: '#f8fafc',
-    heroMuted: '#bfdbfe',
+    textOnHero: '#ffffff',
+    heroMuted: '#dbeafe',
   },
   dark: {
-    text: '#ECEDEE',
-    background: '#151718',
+    text: '#f1f5f9',
+    background: '#0f172a',
     tint: tintColorDark,
-    icon: '#9BA1A6',
-    tabIconDefault: '#9BA1A6',
+    icon: '#94a3b8',
+    tabIconDefault: '#94a3b8',
     tabIconSelected: tintColorDark,
     surfaceMuted: '#1e293b',
+    surfaceCard: '#1e293b',
     borderSubtle: '#334155',
     barTrack: '#334155',
     textOnHero: '#f8fafc',
-    heroMuted: '#93c5fd',
+    heroMuted: '#bfdbfe',
   },
 };
 
 // hero gradient stops – used with expo-linear-gradient (branding / first impression)
 export function heroGradientStops(scheme: 'light' | 'dark'): readonly [string, string, string] {
   if (scheme === 'dark') {
-    return ['#0b1220', '#1e3a8a', '#2563eb'] as const;
+    return ['#020617', '#1e3a8a', '#2563eb'] as const;
   }
-  return ['#1e40af', '#2563eb', '#38bdf8'] as const;
+  return ['#1d4ed8', '#2563eb', '#60a5fa'] as const;
 }
 
 // fonts – platform-specific stacks (expo starter pattern)

@@ -11,6 +11,7 @@ import { SimpleLineChart } from '@/components/insights/simple-line-chart';
 import { SimplePieChart } from '@/components/insights/simple-pie-chart';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { EmptyStateCard } from '@/components/ui/empty-state-card';
 import { HeroBanner } from '@/components/ui/hero-banner';
 import { SimpleBarChart } from '@/components/ui/simple-bar-chart';
 import { Colors } from '@/constants/theme';
@@ -153,8 +154,11 @@ export default function InsightsScreen() {
 
   if (loading) {
     return (
-      <ThemedView style={styles.centered}>
-        <ActivityIndicator size="large" color={palette.tint} />
+      <ThemedView
+        style={styles.centered}
+        accessibilityLabel="Loading insights"
+        accessibilityLiveRegion="polite">
+        <ActivityIndicator size="large" color={palette.tint} accessibilityElementsHidden />
         <ThemedText style={styles.muted}>Loading insights…</ThemedText>
       </ThemedView>
     );
@@ -164,7 +168,12 @@ export default function InsightsScreen() {
 
   return (
     <ThemedView style={styles.flex}>
-      <HeroBanner colorScheme={colorScheme} eyebrow="CareerBoost · Insights" title="Insights" />
+      <HeroBanner
+        colorScheme={colorScheme}
+        eyebrow="CareerBoost · Insights"
+        title="Insights"
+        tagline="Charts and streaks from your saved applications—no account required."
+      />
 
       <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
         <ThemedText style={[styles.note, { color: palette.icon }]}>{periodHint}</ThemedText>
@@ -206,14 +215,29 @@ export default function InsightsScreen() {
         </View>
 
         {loadError ? (
-          <ThemedText style={styles.err}>Could not load: {loadError}</ThemedText>
+          <EmptyStateCard
+            icon="alert-circle-outline"
+            title="Could not load insights"
+            message={loadError}
+            tint="#dc2626"
+            surface={palette.surfaceCard}
+            border={palette.borderSubtle}
+            textColor={palette.text}
+            mutedColor={palette.icon}
+          />
         ) : null}
 
         {!loadError && totalInView === 0 ? (
-          <ThemedText style={styles.empty}>
-            No applications in this window. Add applications with applied dates in range, or run the seed script, to see
-            charts and colours here.
-          </ThemedText>
+          <EmptyStateCard
+            icon="bar-chart-outline"
+            title="Nothing in this window yet"
+            message="Try Daily, Weekly, or Monthly above, or add applications whose applied dates fall in the selected range."
+            tint={palette.tint}
+            surface={palette.surfaceCard}
+            border={palette.borderSubtle}
+            textColor={palette.text}
+            mutedColor={palette.icon}
+          />
         ) : null}
 
         {!loadError ? (
@@ -374,8 +398,6 @@ const styles = StyleSheet.create({
   segText: { fontSize: 14 },
   sectionHead: { marginTop: 10, fontSize: 16 },
   caption: { fontSize: 13, lineHeight: 18 },
-  empty: { opacity: 0.85, fontSize: 15, lineHeight: 22 },
-  err: { color: '#b91c1c', fontSize: 15 },
   footer: { fontSize: 13, marginTop: 8 },
   streakCard: { borderWidth: 1, borderRadius: 14, padding: 12 },
   streakRow: { flexDirection: 'row', gap: 12 },

@@ -2,7 +2,7 @@
 
 // imports
 import { Ionicons } from '@expo/vector-icons';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -17,6 +17,7 @@ import {
 import { useThemeControls } from '@/contexts/app-color-scheme';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { EmptyStateCard } from '@/components/ui/empty-state-card';
 import { HeroBanner } from '@/components/ui/hero-banner';
 import { StatStrip } from '@/components/ui/stat-strip';
 import { Colors } from '@/constants/theme';
@@ -29,6 +30,7 @@ import {
 } from '@/lib/application-list-query';
 import { cardShadowStyle } from '@/lib/card-shadow';
 import { deleteLocalProfileData } from '@/lib/delete-local-profile';
+import { exportAndShareApplicationsCsv } from '@/lib/export-applications-csv';
 import { clearSession } from '@/lib/session';
 import { asc, desc, eq } from 'drizzle-orm';
 import { useFocusEffect } from '@react-navigation/native';
@@ -63,6 +65,15 @@ export default function JobApplicationScreen() {
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
   const [dateFromInput, setDateFromInput] = useState('');
   const [dateToInput, setDateToInput] = useState('');
+  const [exportBusy, setExportBusy] = useState(false);
+
+  const hasActiveFilters = useMemo(() => {
+    const fromOk = Boolean(dateFromInput.trim() && normaliseIsoDateInput(dateFromInput));
+    const toOk = Boolean(dateToInput.trim() && normaliseIsoDateInput(dateToInput));
+    return (
+      searchText.trim().length > 0 || selectedCategoryId != null || fromOk || toOk
+    );
+  }, [searchText, selectedCategoryId, dateFromInput, dateToInput]);
 
   // data – category names for chips; applications joined with optional WHERE
   const refresh = useCallback(async () => {
@@ -126,6 +137,22 @@ export default function JobApplicationScreen() {
     router.push('/add-application');
   };
 
+  const onExportCsv = () => {
+    void (async () => {
+      setExportBusy(true);
+      try {
+        await exportAndShareApplicationsCsv();
+      } catch (err) {
+        Alert.alert(
+          'Export failed',
+          err instanceof Error ? err.message : 'Could not create or share the CSV file.',
+        );
+      } finally {
+        setExportBusy(false);
+      }
+    })();
+  };
+
   const onLogout = () => {
     Alert.alert('Log out?', 'Are you sure you want to log out?', [
       { text: 'Cancel', style: 'cancel' },
@@ -172,8 +199,11 @@ export default function JobApplicationScreen() {
   // render – full-screen spinner only before the first successful fetch (filters use pull-style refresh)
   if (showInitialLoader) {
     return (
-      <ThemedView style={styles.centered}>
-        <ActivityIndicator size="large" color={palette.tint} />
+      <ThemedView
+        style={styles.centered}
+        accessibilityLabel="Loading applications"
+        accessibilityLiveRegion="polite">
+        <ActivityIndicator size="large" color={palette.tint} accessibilityElementsHidden />
         <ThemedText style={styles.muted}>Loading…</ThemedText>
       </ThemedView>
     );
@@ -184,8 +214,9 @@ export default function JobApplicationScreen() {
     <ThemedView style={styles.flex}>
       <HeroBanner
         colorScheme={colorScheme}
-        eyebrow="CareerBoost · Applications"
-        title="Applications"
+        eyebrow="CareerBoost"
+        title="Job Application Tracker"
+        tagline="Private pipeline on this device — log roles, dates, and progress in one place."
       />
       <View style={styles.body}>
         <View style={styles.topRow}>
@@ -203,6 +234,22 @@ export default function JobApplicationScreen() {
                 { borderColor: palette.tint, opacity: pressed ? 0.7 : 1 },
               ]}>
               <ThemedText style={[styles.addText, { color: palette.tint }]}>Add</ThemedText>
+            </Pressable>
+            <Pressable
+              onPress={onExportCsv}
+              disabled={exportBusy}
+              accessibilityRole="button"
+              accessibilityLabel="Export all saved applications as a CSV file"
+              accessibilityHint="Creates a spreadsheet file with every stored application, not only the filtered list. Opens share or download."
+              accessibilityState={{ busy: exportBusy }}
+              style={({ pressed }) => [
+                styles.iconButton,
+                {
+                  borderColor: palette.tint,
+                  opacity: exportBusy ? 0.5 : pressed ? 0.75 : 1,
+                },
+              ]}>
+              <Ionicons name="download-outline" size={22} color={palette.tint} />
             </Pressable>
             <Pressable
               onPress={toggleColorScheme}
@@ -276,7 +323,14 @@ export default function JobApplicationScreen() {
           accessibilityLabel="Search applications by company or role"
           autoCapitalize="none"
           autoCorrect={false}
-          style={[styles.searchInput, { color: palette.text, borderColor: palette.icon }]}
+          style={[
+            styles.searchInput,
+            {
+              color: palette.text,
+              borderColor: palette.borderSubtle,
+              backgroundColor: palette.surfaceCard,
+            },
+          ]}
         />
 
         <ThemedText type="defaultSemiBold" style={styles.filterLabel}>
@@ -291,7 +345,14 @@ export default function JobApplicationScreen() {
             accessibilityLabel="Filter applications applied on or after this date"
             autoCapitalize="none"
             autoCorrect={false}
-            style={[styles.dateInput, { color: palette.text, borderColor: palette.icon }]}
+            style={[
+              styles.dateInput,
+              {
+                color: palette.text,
+                borderColor: palette.borderSubtle,
+                backgroundColor: palette.surfaceCard,
+              },
+            ]}
           />
           <TextInput
             value={dateToInput}
@@ -301,7 +362,14 @@ export default function JobApplicationScreen() {
             accessibilityLabel="Filter applications applied on or before this date"
             autoCapitalize="none"
             autoCorrect={false}
-            style={[styles.dateInput, { color: palette.text, borderColor: palette.icon }]}
+            style={[
+              styles.dateInput,
+              {
+                color: palette.text,
+                borderColor: palette.borderSubtle,
+                backgroundColor: palette.surfaceCard,
+              },
+            ]}
           />
         </View>
         {dateFromInput.trim() && !normaliseIsoDateInput(dateFromInput) ? (
@@ -344,7 +412,7 @@ export default function JobApplicationScreen() {
               {
                 borderColor: selectedCategoryId === null ? palette.tint : palette.icon,
                 backgroundColor:
-                  selectedCategoryId === null ? `${palette.tint}22` : palette.background,
+                  selectedCategoryId === null ? `${palette.tint}22` : palette.surfaceCard,
                 opacity: pressed ? 0.85 : 1,
               },
             ]}>
@@ -369,7 +437,7 @@ export default function JobApplicationScreen() {
                   styles.chip,
                   {
                     borderColor: selected ? palette.tint : palette.icon,
-                    backgroundColor: selected ? `${palette.tint}22` : palette.background,
+                    backgroundColor: selected ? `${palette.tint}22` : palette.surfaceCard,
                     opacity: pressed ? 0.85 : 1,
                   },
                 ]}>
@@ -381,22 +449,32 @@ export default function JobApplicationScreen() {
           })}
         </ScrollView>
 
-        {rows.length === 0 ? (
-          <ThemedText style={styles.muted}>
-            {searchText.trim().length > 0 ||
-            selectedCategoryId != null ||
-            (dateFromInput.trim() && normaliseIsoDateInput(dateFromInput)) ||
-            (dateToInput.trim() && normaliseIsoDateInput(dateToInput))
-              ? 'No applications match these filters. Adjust search, category, dates, or clear filters.'
-              : 'No applications found. (If this is a fresh install, seed should create sample data.)'}
-          </ThemedText>
-        ) : null}
       </View>
 
       <FlatList
+        style={styles.listFlex}
         data={rows}
         keyExtractor={(item) => String(item.id)}
-        contentContainerStyle={styles.list}
+        contentContainerStyle={[
+          styles.list,
+          rows.length === 0 ? styles.listEmptyGrow : null,
+        ]}
+        ListEmptyComponent={
+          <EmptyStateCard
+            icon={hasActiveFilters ? 'funnel-outline' : 'briefcase-outline'}
+            title={hasActiveFilters ? 'No matches' : 'No applications yet'}
+            message={
+              hasActiveFilters
+                ? 'Adjust search, category, or date filters—or clear them—to see your list.'
+                : 'Tap Add to log your first application. Everything stays on this device.'
+            }
+            tint={palette.tint}
+            surface={palette.surfaceCard}
+            border={palette.borderSubtle}
+            textColor={palette.text}
+            mutedColor={palette.icon}
+          />
+        }
         renderItem={({ item }) => (
           <Pressable
             accessibilityRole="button"
@@ -409,7 +487,7 @@ export default function JobApplicationScreen() {
                 cardShadowStyle,
                 {
                   borderColor: palette.borderSubtle,
-                  backgroundColor: palette.background,
+                  backgroundColor: palette.surfaceCard,
                 },
               ]}>
               <View style={styles.cardTop}>
@@ -516,7 +594,9 @@ const styles = StyleSheet.create({
   },
   logoutText: { color: '#c00', fontWeight: '600' },
   muted: { opacity: 0.8, marginBottom: 8 },
+  listFlex: { flex: 1 },
   list: { paddingHorizontal: 16, paddingBottom: 16, gap: 12 },
+  listEmptyGrow: { flexGrow: 1, justifyContent: 'center', paddingVertical: 20 },
   card: { borderWidth: 1, borderRadius: 14, padding: 14, gap: 6 },
   cardTop: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 },
   cardTitleBlock: { flexShrink: 1, gap: 2 },

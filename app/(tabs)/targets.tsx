@@ -12,6 +12,7 @@ import {
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { WeekMonthMiniBars } from '@/components/targets/week-month-mini-bars';
+import { EmptyStateCard } from '@/components/ui/empty-state-card';
 import { HeroBanner } from '@/components/ui/hero-banner';
 import { Colors } from '@/constants/theme';
 import { db } from '@/db/client';
@@ -207,8 +208,11 @@ export default function TargetsScreen() {
   // render
   if (loading) {
     return (
-      <ThemedView style={styles.centered}>
-        <ActivityIndicator size="large" color={palette.tint} />
+      <ThemedView
+        style={styles.centered}
+        accessibilityLabel="Loading targets"
+        accessibilityLiveRegion="polite">
+        <ActivityIndicator size="large" color={palette.tint} accessibilityElementsHidden />
         <ThemedText style={styles.muted}>Loading targets…</ThemedText>
       </ThemedView>
     );
@@ -269,14 +273,23 @@ export default function TargetsScreen() {
         </View>
       ) : null}
 
-      {rows.length === 0 ? (
-        <ThemedText style={styles.empty}>No targets yet. Seed adds demo targets for charts and progress.</ThemedText>
-      ) : null}
-
       <FlatList
+        style={styles.listFlex}
         data={rows}
         keyExtractor={(item) => String(item.id)}
-        contentContainerStyle={styles.list}
+        contentContainerStyle={[styles.list, rows.length === 0 ? styles.listEmptyGrow : null]}
+        ListEmptyComponent={
+          <EmptyStateCard
+            icon="flag-outline"
+            title="No targets yet"
+            message="When you add weekly or monthly goals, they appear here with bars driven by your saved applications."
+            tint={palette.tint}
+            surface={palette.surfaceCard}
+            border={palette.borderSubtle}
+            textColor={palette.text}
+            mutedColor={palette.icon}
+          />
+        }
         refreshing={loading}
         onRefresh={() => void refresh()}
         renderItem={({ item }) => (
@@ -284,7 +297,7 @@ export default function TargetsScreen() {
             style={[
               styles.card,
               cardShadowStyle,
-              { borderColor: palette.borderSubtle, backgroundColor: palette.background },
+              { borderColor: palette.borderSubtle, backgroundColor: palette.surfaceCard },
             ]}
             accessible
             accessibilityLabel={`${item.title}. ${item.periodLabel}. ${item.statusLabel}`}>
@@ -316,8 +329,9 @@ const styles = StyleSheet.create({
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 10 },
   muted: { opacity: 0.85 },
   note: { paddingHorizontal: 16, marginBottom: 8, marginTop: 4, fontSize: 14, fontWeight: '500' },
-  empty: { paddingHorizontal: 16, opacity: 0.85, marginBottom: 8 },
+  listFlex: { flex: 1 },
   list: { paddingHorizontal: 16, paddingBottom: 24, gap: 12 },
+  listEmptyGrow: { flexGrow: 1, justifyContent: 'center', paddingVertical: 24 },
   summaryCard: {
     marginHorizontal: 16,
     marginBottom: 10,
