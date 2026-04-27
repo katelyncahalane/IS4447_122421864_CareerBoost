@@ -1,1 +1,0 @@
-ALTER TABLE `targets` ADD `title` text;
