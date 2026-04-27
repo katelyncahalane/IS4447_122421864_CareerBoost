@@ -33,3 +33,20 @@ jest.mock('react-native-safe-area-context', () => {
     useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
   };
 });
+
+// mock – react-native-svg is native; render as plain Views in Jest
+jest.mock('react-native-svg', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+  const Stub = (p: { children?: React.ReactNode }) => React.createElement(View, p);
+  return {
+    __esModule: true,
+    default: Stub,
+    Svg: Stub,
+    Circle: Stub,
+    Path: Stub,
+    Polyline: Stub,
+    Line: Stub,
+    G: Stub,
+  };
+});

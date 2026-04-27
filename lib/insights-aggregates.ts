@@ -130,3 +130,133 @@ export function aggregateApplicationsByPeriod(
 export function maxBucketCount(buckets: readonly InsightBucket[]): number {
   return buckets.reduce((m, b) => Math.max(m, b.count), 0);
 }
+
+/** Distinct high-contrast colours for charts (WCAG-friendly on white / dark grey). */
+export const INSIGHT_CHART_PALETTE = [
+  '#2563eb',
+  '#16a34a',
+  '#ea580c',
+  '#a855f7',
+  '#ca8a04',
+  '#db2777',
+  '#0d9488',
+  '#c026d3',
+] as const;
+
+export type SliceDatum = { label: string; count: number; color: string };
+
+/**
+ * True when an application applied date falls inside the same rolling window
+ * used by aggregateApplicationsByPeriod (14 days / 8 weeks / 12 months).
+ */
+export function isAppliedDateInInsightWindow(
+  iso: string,
+  period: InsightPeriod,
+  now: Date = new Date(),
+): boolean {
+  const t = iso.trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(t)) return false;
+
+  if (period === 'day') {
+    for (let i = 13; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
+      if (toIsoDate(d) === t) return true;
+    }
+    return false;
+  }
+
+  if (period === 'week') {
+    const appMonday = mondayKeyFromIsoDate(t);
+    if (!appMonday) return false;
+    const currentMonday = mondayKeyFromIsoDate(toIsoDate(now))!;
+    const anchor = new Date(
+      Number(currentMonday.slice(0, 4)),
+      Number(currentMonday.slice(5, 7)) - 1,
+      Number(currentMonday.slice(8, 10)),
+    );
+    for (let w = 7; w >= 0; w--) {
+      const d = new Date(anchor);
+      d.setDate(d.getDate() - w * 7);
+      if (toIsoDate(d) === appMonday) return true;
+    }
+    return false;
+  }
+
+  const mKey = monthKeyFromIsoDate(t);
+  if (!mKey) return false;
+  for (let i = 11; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    if (key === mKey) return true;
+  }
+  return false;
+}
+
+export function filterRowsInInsightWindow<T extends { appliedDate: string }>(
+  rows: readonly T[],
+  period: InsightPeriod,
+  now: Date = new Date(),
+): T[] {
+  return rows.filter((r) => isAppliedDateInInsightWindow(r.appliedDate, period, now));
+}
+
+export function aggregateSlicesByField<T>(
+  rows: readonly T[],
+  getField: (row: T) => string,
+  colorAtIndex: (index: number) => string,
+): SliceDatum[] {
+  const map = new Map<string, number>();
+  for (const r of rows) {
+    const k = getField(r).trim() || 'Unknown';
+    map.set(k, (map.get(k) ?? 0) + 1);
+  }
+  return [...map.entries()]
+    .filter(([, c]) => c > 0)
+    .sort((a, b) => b[1] - a[1])
+    .map(([label, count], i) => ({ label, count, color: colorAtIndex(i) }));
+}
+
+export function aggregateCategoryMix(
+  rows: readonly { categoryName: string; categoryColor: string }[],
+): SliceDatum[] {
+  const order: string[] = [];
+  const map = new Map<string, { count: number; color: string }>();
+  for (const r of rows) {
+    const name = r.categoryName.trim() || 'Uncategorised';
+    const color = r.categoryColor.trim() || '#64748b';
+    const cur = map.get(name);
+    if (cur) cur.count += 1;
+    else {
+      map.set(name, { count: 1, color });
+      order.push(name);
+    }
+  }
+  return order.map((name) => {
+    const x = map.get(name)!;
+    return { label: name, count: x.count, color: x.color };
+  });
+}
+
+export type AvgMetricRow = { label: string; avg: number; count: number; color: string };
+
+export function averageMetricByStatus(
+  rows: readonly { status: string; metricValue: number }[],
+  colorAtIndex: (index: number) => string,
+): AvgMetricRow[] {
+  const sums = new Map<string, { sum: number; n: number }>();
+  for (const r of rows) {
+    const k = r.status.trim() || 'Unknown';
+    const cur = sums.get(k) ?? { sum: 0, n: 0 };
+    cur.sum += r.metricValue;
+    cur.n += 1;
+    sums.set(k, cur);
+  }
+  return [...sums.entries()]
+    .map(([label, { sum, n }], i) => ({
+      label,
+      avg: n > 0 ? Math.round((sum / n) * 10) / 10 : 0,
+      count: n,
+      color: colorAtIndex(i),
+    }))
+    .sort((a, b) => b.count - a.count);
+}

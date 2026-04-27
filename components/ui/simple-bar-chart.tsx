@@ -14,6 +14,8 @@ type SimpleBarChartProps = {
   tint: string;
   track: string;
   textColor: string;
+  /** When set, each bar uses these colours (cycles if shorter than data). */
+  barColors?: string[];
   /** Announced to screen readers for the whole chart */
   accessibilitySummary: string;
 };
@@ -25,6 +27,7 @@ export function SimpleBarChart({
   tint,
   track,
   textColor,
+  barColors,
   accessibilitySummary,
 }: SimpleBarChartProps) {
   const maxH = 120;
@@ -37,8 +40,10 @@ export function SimpleBarChart({
       accessibilityLabel={accessibilitySummary}
       style={styles.wrap}>
       <View style={styles.row}>
-        {data.map((b) => {
+        {data.map((b, i) => {
           const h = maxCount === 0 ? 0 : Math.round((b.count / safeMax) * maxH);
+          const fill =
+            barColors && barColors.length > 0 ? barColors[i % barColors.length]! : tint;
           return (
             <View key={b.label} style={styles.col}>
               <ThemedText style={[styles.count, { color: textColor }]}>{b.count}</ThemedText>
@@ -46,7 +51,7 @@ export function SimpleBarChart({
                 <View
                   style={[
                     styles.fill,
-                    { height: Math.max(h, b.count > 0 ? 4 : 0), backgroundColor: tint },
+                    { height: Math.max(h, b.count > 0 ? 4 : 0), backgroundColor: fill },
                   ]}
                   accessibilityElementsHidden
                 />
