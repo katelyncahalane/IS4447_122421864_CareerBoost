@@ -4,6 +4,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 
 import { AvgMetricByStatus } from '@/components/insights/avg-metric-by-status';
+import { CareerTipCard } from '@/components/insights/career-tip-card';
 import { CategoryMixStrip } from '@/components/insights/category-mix-strip';
 import { InsightStatCards } from '@/components/insights/insight-stat-cards';
 import { SimpleLineChart } from '@/components/insights/simple-line-chart';
@@ -167,6 +168,15 @@ export default function InsightsScreen() {
 
       <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
         <ThemedText style={[styles.note, { color: palette.icon }]}>{periodHint}</ThemedText>
+
+        {/* Section: external API integration (advanced feature) */}
+        <CareerTipCard
+          tint={palette.tint}
+          textColor={palette.text}
+          mutedColor={palette.icon}
+          surfaceMuted={palette.surfaceMuted}
+          borderColor={palette.borderSubtle}
+        />
 
         <View style={styles.segment} accessibilityRole="tablist" accessibilityLabel="Time range">
           {(['day', 'week', 'month'] as const).map((p) => {
