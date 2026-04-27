@@ -140,10 +140,10 @@ export default function JobApplicationScreen() {
     ]);
   };
 
-  // rubric: delete profile – wipe sqlite + session (local-only; no cloud)
+  // rubric: delete profile – wipe sqlite + session (no cloud)
   const onDeleteProfile = () => {
     Alert.alert(
-      'Delete profile and all local data?',
+      'Delete profile and all data on this device?',
       'Removes every application, category, target, and status log on this device. You will be signed out. You can register again afterwards. This cannot be undone.',
       [
         { text: 'Cancel', style: 'cancel' },
@@ -184,7 +184,7 @@ export default function JobApplicationScreen() {
     <ThemedView style={styles.flex}>
       <HeroBanner
         colorScheme={colorScheme}
-        eyebrow="CareerBoost · local-only"
+        eyebrow="CareerBoost · Applications"
         title="Applications"
       />
       <View style={styles.body}>
@@ -230,22 +230,20 @@ export default function JobApplicationScreen() {
             <Pressable
               onPress={onDeleteProfile}
               accessibilityRole="button"
-              accessibilityLabel="Delete profile and wipe all local data"
+              accessibilityLabel="Delete profile and remove all data from this device"
               style={({ pressed }) => [
-                styles.iconButton,
-                { borderColor: '#b91c1c', opacity: pressed ? 0.75 : 1 },
+                styles.deleteAccountButton,
+                {
+                  opacity: pressed ? 0.88 : 1,
+                  borderColor: colorScheme === 'dark' ? '#7f1d1d' : '#fecaca',
+                  backgroundColor: colorScheme === 'dark' ? 'rgba(185,28,28,0.18)' : '#fef2f2',
+                },
               ]}>
-              <Ionicons name="trash-outline" size={20} color="#b91c1c" />
+              <Ionicons name="person-remove-outline" size={18} color="#b91c1c" />
+              <ThemedText style={styles.deleteAccountText}>Delete account</ThemedText>
             </Pressable>
           </ScrollView>
         </View>
-        <Pressable
-          onPress={onDeleteProfile}
-          accessibilityRole="button"
-          accessibilityHint="Wipes database so seed can run again on next open"
-          style={({ pressed }) => [styles.resetLinkWrap, { opacity: pressed ? 0.8 : 1 }]}>
-          <ThemedText style={styles.resetLink}>Reset all local data (fresh seed demo)</ThemedText>
-        </Pressable>
 
         <View style={styles.statBlock}>
           <StatStrip
@@ -484,8 +482,16 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     paddingRight: 4,
   },
-  resetLinkWrap: { alignSelf: 'flex-end', marginBottom: 10, paddingVertical: 4 },
-  resetLink: { color: '#b91c1c', fontSize: 13, fontWeight: '700', textDecorationLine: 'underline' },
+  deleteAccountButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 999,
+    borderWidth: 1,
+  },
+  deleteAccountText: { color: '#b91c1c', fontWeight: '800', fontSize: 14 },
   iconButton: {
     paddingVertical: 8,
     paddingHorizontal: 10,

@@ -56,7 +56,7 @@ function RootLayoutInner() {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
         <ActivityIndicator />
-        <Text style={{ marginTop: 12 }}>Preparing local database…</Text>
+        <Text style={{ marginTop: 12 }}>Preparing database…</Text>
       </View>
     );
   }

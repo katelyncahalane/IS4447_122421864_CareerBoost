@@ -43,9 +43,7 @@ export default function RegisterScreen() {
     <ThemedView style={styles.container}>
       <HeroBanner colorScheme={colorScheme} eyebrow="CareerBoost" title="Create account" />
 
-      <ThemedText style={styles.muted}>
-        Create an account for this device (local-only).
-      </ThemedText>
+      <ThemedText style={styles.muted}>Create an account to use CareerBoost on this device.</ThemedText>
 
       <ThemedText type="defaultSemiBold">Username</ThemedText>
       <TextInput

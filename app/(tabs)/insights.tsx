@@ -164,7 +164,7 @@ export default function InsightsScreen() {
 
   return (
     <ThemedView style={styles.flex}>
-      <HeroBanner colorScheme={colorScheme} eyebrow="CareerBoost · local data" title="Insights" />
+      <HeroBanner colorScheme={colorScheme} eyebrow="CareerBoost · Insights" title="Insights" />
 
       <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
         <ThemedText style={[styles.note, { color: palette.icon }]}>{periodHint}</ThemedText>
@@ -347,8 +347,8 @@ export default function InsightsScreen() {
             />
 
             <ThemedText style={[styles.footer, { color: palette.icon }]}>
-              Total application events in the time buckets above: {totalInView}. All figures read from your local SQLite
-              database only.
+              Total application events in the time buckets above: {totalInView}. All figures come from your saved
+              applications on this device.
             </ThemedText>
           </>
         ) : null}
