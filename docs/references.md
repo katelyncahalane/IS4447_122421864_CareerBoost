@@ -44,6 +44,7 @@ This app is built as a production-style React Native (Expo) project with local-o
 - Jest (docs): https://jestjs.io/docs/getting-started
 - Testing Library for React Native (docs): https://testing-library.com/docs/react-native-testing-library/intro/
 - jest-expo (package): https://docs.expo.dev/develop/unit-testing/
+- Course lab repo (tutorial code): https://github.com/rorypierce111/react-native-lab
 
 ## Helpful videos (quick learning)
 

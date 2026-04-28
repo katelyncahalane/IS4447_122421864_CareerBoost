@@ -1,15 +1,51 @@
 # CareerBoost
 
-Expo React Native app for tracking job applications, targets, and insights. Data stays on the device unless you explicitly export or share it.
+**GitHub repository:** https://github.com/katelyncahalane/IS4447_122421864_CareerBoost.git  
+**Expo link / QR (for marking):**
+https://expo.dev/preview/update?message=Final+submission&updateRuntimeVersion=1.0.0&createdAt=2026-04-28T20%3A36%3A42.134Z&slug=exp&projectId=d82396d7-4b37-4e48-b9e5-809d2f91d83c&group=2853c044-4dc0-483d-9752-3523f75e059f
+
+CareerBoost is a production-style mobile app built with React Native (Expo).  
+**Coursework option: C) Job applications tracker.**
+
+It lets users add, edit, and delete job application records, organise them using categories, set weekly or monthly targets, and view daily, weekly, and monthly insights with charts. All core record data is stored locally on the device.
 
 ## Quick start
 
+### 1) Install dependencies
+
 ```bash
 npm install
+```
+
+### 2) Start the app (Expo Go)
+
+```bash
 npx expo start
 ```
 
-Run tests: `npm test`
+- Install **Expo Go** on your phone (iOS or Android).
+- Scan the QR code shown in the terminal.
+- If you change configuration or dependencies, restart with cache clear:
+
+```bash
+npx expo start -c
+```
+
+### 3) Run tests
+
+```bash
+npm test
+```
+
+### 4) Publish the Expo link / QR for marking (EAS Update)
+
+When ready to publish a public preview link/QR:
+
+```bash
+eas update --branch production --message "Final submission"
+```
+
+Then open the Expo dashboard project preview link/QR and paste it at the top of this README.
 
 ## Rubric alignment (coursework)
 
