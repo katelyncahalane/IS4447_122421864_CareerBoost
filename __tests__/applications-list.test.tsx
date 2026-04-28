@@ -1,5 +1,5 @@
-// Integration test (rubric testing item 10) — Tracker tab list: mimics post-migration SQLite filled with seed-shaped rows.
-// `refresh()` loads via `db.select…innerJoin`; UI must show company, role, date, metric, category, status from that state.
+// Integration test (rubric item 10): Tracker applications list, data flows from mocked DB query through state to UI
+// (same idea as habits/trips list screens: seeded rows must appear as list cells after init).
 
 // mocks – must sit above the screen import (jest hoists these anyway)
 jest.mock('@/hooks/use-color-scheme', () => ({

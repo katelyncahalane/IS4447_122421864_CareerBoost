@@ -367,7 +367,13 @@ export default function JobApplicationScreen() {
         title="Job Application Tracker"
         tagline="Private pipeline on this device, log roles, dates, and progress in one place."
       />
-      <View style={styles.body}>
+      <FlatList
+        style={styles.listFlex}
+        data={rows}
+        keyExtractor={(item) => String(item.id)}
+        keyboardShouldPersistTaps="handled"
+        ListHeaderComponent={
+          <View style={styles.listHeaderBlock}>
         <View style={styles.topRow}>
           <ScrollView
             horizontal
@@ -844,8 +850,6 @@ export default function JobApplicationScreen() {
           })}
       </ScrollView>
 
-      </View>
-
       <View style={styles.applicationsSectionHead}>
         <ThemedText type="defaultSemiBold" style={[styles.applicationsTitle, { color: palette.text }]}>
           Job applications
@@ -885,12 +889,10 @@ export default function JobApplicationScreen() {
         </View>
       ) : null}
 
-      <FlatList
-        style={styles.listFlex}
-        data={rows}
-        keyExtractor={(item) => String(item.id)}
+          </View>
+        }
         contentContainerStyle={[
-          styles.list,
+          styles.listScroll,
           rows.length === 0 ? styles.listEmptyGrow : null,
         ]}
         ListEmptyComponent={
@@ -964,7 +966,7 @@ export default function JobApplicationScreen() {
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
-  body: { padding: 16, paddingTop: 10, gap: 8 },
+  listHeaderBlock: { gap: 8, paddingTop: 10 },
   filterPanel: { borderWidth: 1, borderRadius: 12, padding: 12, gap: 8, marginBottom: 4 },
   filterPanelHead: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
   filterKicker: { fontSize: 12, lineHeight: 17, fontWeight: '600', marginTop: 4 },
@@ -1112,7 +1114,7 @@ const styles = StyleSheet.create({
   logoutText: { color: '#c00', fontWeight: '600' },
   muted: { opacity: 0.8, marginBottom: 8 },
   listFlex: { flex: 1 },
-  list: { paddingHorizontal: 16, paddingBottom: 16, gap: 12 },
+  listScroll: { paddingHorizontal: 16, paddingBottom: 24, gap: 12 },
   listEmptyGrow: { flexGrow: 1, justifyContent: 'center', paddingVertical: 20 },
   card: { borderWidth: 1, borderRadius: 14, overflow: 'hidden' },
   cardRow: { flexDirection: 'row', alignItems: 'stretch' },

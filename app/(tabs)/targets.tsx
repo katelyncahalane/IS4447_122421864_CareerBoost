@@ -259,7 +259,7 @@ export default function TargetsScreen() {
 
   const headerNote = useMemo(
     () =>
-      `This calendar week starts ${currentWeekStartIso()} (Mon–Sun); this month starts ${currentMonthStartIso()}. Progress and “remaining” use only stored application dates in each goal’s window. Goals can be global (all categories) or scoped to one category.`,
+      `Week starts ${currentWeekStartIso()} (Mon). Month starts ${currentMonthStartIso()}.`,
     [],
   );
 
@@ -298,196 +298,199 @@ export default function TargetsScreen() {
 
   return (
     <ThemedView style={styles.flex}>
-      <HeroBanner
-        eyebrow="CareerBoost, weekly and monthly"
-        title="Targets"
-        tagline="Weekly and monthly application count goals, global or per category, with progress, remaining, and clear met, exceeded, or unmet states."
-      />
-      <ThemedText style={[styles.note, { color: palette.icon }]}>{headerNote}</ThemedText>
-
-      <View style={styles.targetCtaRow}>
-        <ThemedText style={[styles.targetCtaText, { color: palette.text }]}>
-          Add goals for this week, this month, past, or future windows, all categories or one track. Each card shows
-          counts, what is left to hit the goal, or how far you have exceeded it.
-        </ThemedText>
-        <Pressable
-          onPress={() => router.push('/add-target' as Href)}
-          accessibilityRole="button"
-          accessibilityLabel="Add a new target"
-          style={({ pressed }) => [
-            styles.addTargetBtn,
-            { borderColor: palette.tint, backgroundColor: `${palette.tint}18`, opacity: pressed ? 0.85 : 1 },
-          ]}>
-          <ThemedText style={[styles.addTargetBtnText, { color: palette.tint }]}>Add target</ThemedText>
-        </Pressable>
-      </View>
-
-      {reminderPrefs ? (
-        <View
-          style={[
-            styles.reminderCard,
-            { backgroundColor: palette.surfaceCard, borderColor: palette.borderSubtle },
-          ]}
-          accessible
-          accessibilityLabel="Local notification reminders for logging and targets">
-          <ThemedText type="defaultSemiBold">Local reminders</ThemedText>
-          <ThemedText style={[styles.reminderCaption, { color: palette.icon }]}>
-            Scheduled on this device only. {Platform.OS === 'web' ? 'Web preview cannot deliver native alerts.' : 'Allow notifications when prompted.'}
-          </ThemedText>
-
-          <View style={styles.reminderRow}>
-            <View style={styles.reminderTextCol}>
-              <ThemedText style={[styles.reminderTitle, { color: palette.text }]}>Daily logging nudge</ThemedText>
-              <ThemedText style={[styles.reminderSub, { color: palette.icon }]}>
-                Same time each day ({String(reminderPrefs.dailyHour).padStart(2, '0')}:
-                {String(reminderPrefs.dailyMinute).padStart(2, '0')} local)
-              </ThemedText>
-            </View>
-            <Switch
-              value={reminderPrefs.dailyLogEnabled}
-              onValueChange={(v) => {
-                void (async () => {
-                  const next = { ...reminderPrefs, dailyLogEnabled: v };
-                  setReminderPrefsState(next);
-                  try {
-                    await setReminderPrefs(next);
-                    await syncLocalRemindersFromPrefs(next);
-                  } catch (e) {
-                    const rolled = await getReminderPrefs();
-                    setReminderPrefsState(rolled);
-                    Alert.alert(
-                      'Reminders',
-                      e instanceof Error ? e.message : 'Could not update notification schedule.',
-                    );
-                  }
-                })();
-              }}
-              accessibilityLabel="Daily logging reminder"
-              accessibilityHint="Toggles a repeating local notification to log applications."
-            />
-          </View>
-
-          <View style={styles.reminderRow}>
-            <View style={styles.reminderTextCol}>
-              <ThemedText style={[styles.reminderTitle, { color: palette.text }]}>Weekly target check</ThemedText>
-              <ThemedText style={[styles.reminderSub, { color: palette.icon }]}>
-                Every {weeklyDayLabel} at {String(reminderPrefs.weeklyHour).padStart(2, '0')}:
-                {String(reminderPrefs.weeklyMinute).padStart(2, '0')} (local)
-              </ThemedText>
-            </View>
-            <Switch
-              value={reminderPrefs.weeklyTargetsEnabled}
-              onValueChange={(v) => {
-                void (async () => {
-                  const next = { ...reminderPrefs, weeklyTargetsEnabled: v };
-                  setReminderPrefsState(next);
-                  try {
-                    await setReminderPrefs(next);
-                    await syncLocalRemindersFromPrefs(next);
-                  } catch (e) {
-                    const rolled = await getReminderPrefs();
-                    setReminderPrefsState(rolled);
-                    Alert.alert(
-                      'Reminders',
-                      e instanceof Error ? e.message : 'Could not update notification schedule.',
-                    );
-                  }
-                })();
-              }}
-              accessibilityLabel="Weekly target reminder"
-              accessibilityHint="Toggles a repeating local notification about weekly targets."
-            />
-          </View>
-
-          <View style={styles.reminderRow}>
-            <View style={styles.reminderTextCol}>
-              <ThemedText style={[styles.reminderTitle, { color: palette.text }]}>Monthly target review</ThemedText>
-              <ThemedText style={[styles.reminderSub, { color: palette.icon }]}>
-                Day {reminderPrefs.monthlyDay} of each month at {String(reminderPrefs.monthlyHour).padStart(2, '0')}:
-                {String(reminderPrefs.monthlyMinute).padStart(2, '0')} (local; day capped at 28 for every month)
-              </ThemedText>
-            </View>
-            <Switch
-              value={reminderPrefs.monthlyTargetsEnabled}
-              onValueChange={(v) => {
-                void (async () => {
-                  const next = { ...reminderPrefs, monthlyTargetsEnabled: v };
-                  setReminderPrefsState(next);
-                  try {
-                    await setReminderPrefs(next);
-                    await syncLocalRemindersFromPrefs(next);
-                  } catch (e) {
-                    const rolled = await getReminderPrefs();
-                    setReminderPrefsState(rolled);
-                    Alert.alert(
-                      'Reminders',
-                      e instanceof Error ? e.message : 'Could not update notification schedule.',
-                    );
-                  }
-                })();
-              }}
-              accessibilityLabel="Monthly target reminder"
-              accessibilityHint="Toggles a repeating local notification to review monthly goals."
-            />
-          </View>
-        </View>
-      ) : null}
-
-      {summary ? (
-        <View
-          style={[
-            styles.summaryCard,
-            { backgroundColor: palette.surfaceMuted, borderColor: palette.borderSubtle },
-          ]}
-          accessible
-          accessibilityLabel={`Current week or month targets on this list: ${summary.met} met exactly, ${summary.exceeded} above goal, ${summary.unmet} below goal, out of ${summary.currentCount} total.`}>
-          <ThemedText type="defaultSemiBold">Current week and month (this list)</ThemedText>
-          <ThemedText style={styles.summaryText}>
-            {summary.currentCount === 0
-              ? 'No targets use the current calendar week or month, scroll for other periods or add one with “This week” or “This month”.'
-              : `${summary.met} met, ${summary.exceeded} exceeded, ${summary.unmet} below goal (${summary.currentCount} current-period target${summary.currentCount === 1 ? '' : 's'})`}
-          </ThemedText>
-        </View>
-      ) : null}
-
-      {weekMonthBars ? (
-        <View
-          style={[
-            styles.summaryCard,
-            { backgroundColor: palette.surfaceMuted, borderColor: palette.borderSubtle },
-          ]}>
-          {/* Section: simple visual for targets (week vs month) */}
-          <WeekMonthMiniBars
-            title="Week vs Month (global)"
-            bars={[
-              {
-                label: 'This week',
-                current: weekMonthBars.week.current,
-                goal: weekMonthBars.week.goal,
-                color: weekMonthBars.week.color,
-                detail: weekMonthBars.week.detail,
-              },
-              {
-                label: 'This month',
-                current: weekMonthBars.month.current,
-                goal: weekMonthBars.month.goal,
-                color: weekMonthBars.month.color,
-                detail: weekMonthBars.month.detail,
-              },
-            ]}
-            trackColor={palette.barTrack}
-            textColor={palette.text}
-            mutedColor={palette.icon}
-            accessibilitySummary={`Week and month global targets. Week: ${weekMonthBars.week.current} of ${weekMonthBars.week.goal}. ${weekMonthBars.week.detail}. Month: ${weekMonthBars.month.current} of ${weekMonthBars.month.goal}. ${weekMonthBars.month.detail}.`}
-          />
-        </View>
-      ) : null}
-
       <FlatList
         style={styles.listFlex}
         data={rows}
         keyExtractor={(item) => String(item.id)}
+        keyboardShouldPersistTaps="handled"
         contentContainerStyle={[styles.list, rows.length === 0 ? styles.listEmptyGrow : null]}
+        ListHeaderComponent={
+          <View style={styles.listHeader}>
+            <HeroBanner
+              eyebrow="CareerBoost, weekly and monthly"
+              title="Targets"
+              tagline="Set a weekly or monthly goal and track progress."
+            />
+            <ThemedText style={[styles.note, { color: palette.icon }]}>{headerNote}</ThemedText>
+
+            <View style={styles.targetCtaRow}>
+              <ThemedText style={[styles.targetCtaText, { color: palette.text }]}>
+                Add a target for all categories or one category.
+              </ThemedText>
+              <Pressable
+                onPress={() => router.push('/add-target' as Href)}
+                accessibilityRole="button"
+                accessibilityLabel="Add a new target"
+                style={({ pressed }) => [
+                  styles.addTargetBtn,
+                  { borderColor: palette.tint, backgroundColor: `${palette.tint}18`, opacity: pressed ? 0.85 : 1 },
+                ]}>
+                <ThemedText style={[styles.addTargetBtnText, { color: palette.tint }]}>Add target</ThemedText>
+              </Pressable>
+            </View>
+
+            {reminderPrefs ? (
+              <View
+                style={[
+                  styles.reminderCard,
+                  { backgroundColor: palette.surfaceCard, borderColor: palette.borderSubtle },
+                ]}
+                accessible
+                accessibilityLabel="Local notification reminders for logging and targets">
+                <ThemedText type="defaultSemiBold">Local reminders</ThemedText>
+                <ThemedText style={[styles.reminderCaption, { color: palette.icon }]}>
+                  On this device only. {Platform.OS === 'web' ? 'Web preview cannot show alerts.' : 'Allow notifications when prompted.'}
+                </ThemedText>
+
+                <View style={styles.reminderRow}>
+                  <View style={styles.reminderTextCol}>
+                    <ThemedText style={[styles.reminderTitle, { color: palette.text }]}>Daily logging nudge</ThemedText>
+                    <ThemedText style={[styles.reminderSub, { color: palette.icon }]}>
+                      Same time each day ({String(reminderPrefs.dailyHour).padStart(2, '0')}:
+                      {String(reminderPrefs.dailyMinute).padStart(2, '0')} local)
+                    </ThemedText>
+                  </View>
+                  <Switch
+                    value={reminderPrefs.dailyLogEnabled}
+                    onValueChange={(v) => {
+                      void (async () => {
+                        const next = { ...reminderPrefs, dailyLogEnabled: v };
+                        setReminderPrefsState(next);
+                        try {
+                          await setReminderPrefs(next);
+                          await syncLocalRemindersFromPrefs(next);
+                        } catch (e) {
+                          const rolled = await getReminderPrefs();
+                          setReminderPrefsState(rolled);
+                          Alert.alert(
+                            'Reminders',
+                            e instanceof Error ? e.message : 'Could not update notification schedule.',
+                          );
+                        }
+                      })();
+                    }}
+                    accessibilityLabel="Daily logging reminder"
+                    accessibilityHint="Toggles a repeating local notification to log applications."
+                  />
+                </View>
+
+                <View style={styles.reminderRow}>
+                  <View style={styles.reminderTextCol}>
+                    <ThemedText style={[styles.reminderTitle, { color: palette.text }]}>Weekly target check</ThemedText>
+                    <ThemedText style={[styles.reminderSub, { color: palette.icon }]}>
+                      Every {weeklyDayLabel} at {String(reminderPrefs.weeklyHour).padStart(2, '0')}:
+                      {String(reminderPrefs.weeklyMinute).padStart(2, '0')} (local)
+                    </ThemedText>
+                  </View>
+                  <Switch
+                    value={reminderPrefs.weeklyTargetsEnabled}
+                    onValueChange={(v) => {
+                      void (async () => {
+                        const next = { ...reminderPrefs, weeklyTargetsEnabled: v };
+                        setReminderPrefsState(next);
+                        try {
+                          await setReminderPrefs(next);
+                          await syncLocalRemindersFromPrefs(next);
+                        } catch (e) {
+                          const rolled = await getReminderPrefs();
+                          setReminderPrefsState(rolled);
+                          Alert.alert(
+                            'Reminders',
+                            e instanceof Error ? e.message : 'Could not update notification schedule.',
+                          );
+                        }
+                      })();
+                    }}
+                    accessibilityLabel="Weekly target reminder"
+                    accessibilityHint="Toggles a repeating local notification about weekly targets."
+                  />
+                </View>
+
+                <View style={styles.reminderRow}>
+                  <View style={styles.reminderTextCol}>
+                    <ThemedText style={[styles.reminderTitle, { color: palette.text }]}>Monthly target review</ThemedText>
+                    <ThemedText style={[styles.reminderSub, { color: palette.icon }]}>
+                      Day {reminderPrefs.monthlyDay} of each month at {String(reminderPrefs.monthlyHour).padStart(2, '0')}:
+                      {String(reminderPrefs.monthlyMinute).padStart(2, '0')} (local; day capped at 28 for every month)
+                    </ThemedText>
+                  </View>
+                  <Switch
+                    value={reminderPrefs.monthlyTargetsEnabled}
+                    onValueChange={(v) => {
+                      void (async () => {
+                        const next = { ...reminderPrefs, monthlyTargetsEnabled: v };
+                        setReminderPrefsState(next);
+                        try {
+                          await setReminderPrefs(next);
+                          await syncLocalRemindersFromPrefs(next);
+                        } catch (e) {
+                          const rolled = await getReminderPrefs();
+                          setReminderPrefsState(rolled);
+                          Alert.alert(
+                            'Reminders',
+                            e instanceof Error ? e.message : 'Could not update notification schedule.',
+                          );
+                        }
+                      })();
+                    }}
+                    accessibilityLabel="Monthly target reminder"
+                    accessibilityHint="Toggles a repeating local notification to review monthly goals."
+                  />
+                </View>
+              </View>
+            ) : null}
+
+            {summary ? (
+              <View
+                style={[
+                  styles.summaryCard,
+                  { backgroundColor: palette.surfaceMuted, borderColor: palette.borderSubtle },
+                ]}
+                accessible
+                accessibilityLabel={`Current week or month targets on this list: ${summary.met} met exactly, ${summary.exceeded} above goal, ${summary.unmet} below goal, out of ${summary.currentCount} total.`}>
+                <ThemedText type="defaultSemiBold">Current week and month (this list)</ThemedText>
+                <ThemedText style={styles.summaryText}>
+                  {summary.currentCount === 0
+                    ? 'No targets use the current calendar week or month, scroll for other periods or add one with “This week” or “This month”.'
+                    : `${summary.met} met, ${summary.exceeded} exceeded, ${summary.unmet} below goal (${summary.currentCount} current-period target${summary.currentCount === 1 ? '' : 's'})`}
+                </ThemedText>
+              </View>
+            ) : null}
+
+            {weekMonthBars ? (
+              <View
+                style={[
+                  styles.summaryCard,
+                  { backgroundColor: palette.surfaceMuted, borderColor: palette.borderSubtle },
+                ]}>
+                {/* Section: simple visual for targets (week vs month) */}
+                <WeekMonthMiniBars
+                  title="Week vs Month (global)"
+                  bars={[
+                    {
+                      label: 'This week',
+                      current: weekMonthBars.week.current,
+                      goal: weekMonthBars.week.goal,
+                      color: weekMonthBars.week.color,
+                      detail: weekMonthBars.week.detail,
+                    },
+                    {
+                      label: 'This month',
+                      current: weekMonthBars.month.current,
+                      goal: weekMonthBars.month.goal,
+                      color: weekMonthBars.month.color,
+                      detail: weekMonthBars.month.detail,
+                    },
+                  ]}
+                  trackColor={palette.barTrack}
+                  textColor={palette.text}
+                  mutedColor={palette.icon}
+                  accessibilitySummary={`Week and month global targets. Week: ${weekMonthBars.week.current} of ${weekMonthBars.week.goal}. ${weekMonthBars.week.detail}. Month: ${weekMonthBars.month.current} of ${weekMonthBars.month.goal}. ${weekMonthBars.month.detail}.`}
+                />
+              </View>
+            ) : null}
+          </View>
+        }
         ListEmptyComponent={
           <EmptyStateCard
             icon="flag-outline"
@@ -550,6 +553,7 @@ const styles = StyleSheet.create({
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 10 },
   muted: { opacity: 0.85 },
   note: { paddingHorizontal: 16, marginBottom: 8, marginTop: 4, fontSize: 14, fontWeight: '500' },
+  listHeader: { gap: 10 },
   targetCtaRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',

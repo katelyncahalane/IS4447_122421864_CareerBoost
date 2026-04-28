@@ -1,4 +1,4 @@
-// Component tests — reusable FormField: label, placeholder, optional hint, simulated input → onChangeText.
+// Component tests (rubric item 10): FormField renders label and placeholder, and onChangeText fires when input is simulated.
 
 import React from 'react';
 import { fireEvent, render } from '@testing-library/react-native';

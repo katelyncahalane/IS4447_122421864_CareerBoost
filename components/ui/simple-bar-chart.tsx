@@ -14,6 +14,9 @@ type SimpleBarChartProps = {
   tint: string;
   track: string;
   textColor: string;
+  /** Optional axis titles for clearer marking demos */
+  xAxisTitle?: string;
+  yAxisTitle?: string;
   /** When set, each bar uses these colours (cycles if shorter than data). */
   barColors?: string[];
   /** Announced to screen readers for the whole chart */
@@ -27,6 +30,8 @@ export function SimpleBarChart({
   tint,
   track,
   textColor,
+  xAxisTitle,
+  yAxisTitle,
   barColors,
   accessibilitySummary,
 }: SimpleBarChartProps) {
@@ -39,6 +44,13 @@ export function SimpleBarChart({
       accessibilityRole="image"
       accessibilityLabel={accessibilitySummary}
       style={styles.wrap}>
+      {yAxisTitle ? (
+        <View style={styles.axisTitleRow} accessibilityElementsHidden>
+          <ThemedText style={[styles.axisTitle, { color: textColor }]}>{yAxisTitle}</ThemedText>
+          <ThemedText style={[styles.axisTick, { color: textColor }]}>{maxCount}</ThemedText>
+        </View>
+      ) : null}
+
       <View style={styles.row}>
         {data.map((b, i) => {
           const h = maxCount === 0 ? 0 : Math.round((b.count / safeMax) * maxH);
@@ -66,6 +78,13 @@ export function SimpleBarChart({
           );
         })}
       </View>
+
+      {xAxisTitle ? (
+        <View style={styles.xAxisRow} accessibilityElementsHidden>
+          <ThemedText style={[styles.axisTitle, { color: textColor }]}>{xAxisTitle}</ThemedText>
+          <ThemedText style={[styles.axisTick, { color: textColor }]}>0</ThemedText>
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -73,6 +92,13 @@ export function SimpleBarChart({
 // styles
 const styles = StyleSheet.create({
   wrap: { width: '100%' },
+  axisTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+    gap: 12,
+  },
   row: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: 4 },
   col: { flex: 1, alignItems: 'center', minWidth: 0 },
   count: { fontSize: 11, fontWeight: '700', marginBottom: 4 },
@@ -86,4 +112,13 @@ const styles = StyleSheet.create({
   },
   fill: { width: '100%', borderRadius: 4, minHeight: 0 },
   lab: { fontSize: 10, marginTop: 6, textAlign: 'center' },
+  xAxisRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 8,
+    gap: 12,
+  },
+  axisTitle: { fontSize: 12, fontWeight: '800', flexShrink: 1 },
+  axisTick: { fontSize: 12, fontWeight: '700', opacity: 0.75 },
 });

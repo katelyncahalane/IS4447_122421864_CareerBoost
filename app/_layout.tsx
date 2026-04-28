@@ -177,7 +177,13 @@ function RootLayoutInner() {
         <Stack.Screen name="add-category" options={{ title: 'Add category' }} />
         <Stack.Screen name="edit-category" options={{ title: 'Edit category' }} />
         <Stack.Screen name="add-application" options={{ title: 'Add record' }} />
-        <Stack.Screen name="add-target" options={{ title: 'Add target' }} />
+        <Stack.Screen
+          name="add-target"
+          options={{
+            title: 'Add target',
+            headerBackTitle: 'Back',
+          }}
+        />
         <Stack.Screen name="edit-application" options={{ title: 'Edit record' }} />
       </Stack>
       <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />

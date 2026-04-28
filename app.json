@@ -2,6 +2,7 @@
   "expo": {
     "name": "CareerBoost",
     "slug": "careerboost",
+    "owner": "katelyncahalane",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -9,9 +10,11 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
+      "bundleIdentifier": "com.katelyncahalane.careerboost",
       "supportsTablet": true
     },
     "android": {
+      "package": "com.katelyncahalane.careerboost",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -44,6 +47,20 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "openWeatherApiKey": "",
+      "openWeatherCity": "",
+      "router": {},
+      "eas": {
+        "projectId": "d82396d7-4b37-4e48-b9e5-809d2f91d83c"
+      }
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/d82396d7-4b37-4e48-b9e5-809d2f91d83c"
     }
   }
 }

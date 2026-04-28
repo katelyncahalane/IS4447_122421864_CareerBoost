@@ -170,6 +170,22 @@ export default function InsightsScreen() {
 
   const categorySlices = useMemo(() => aggregateCategoryMix(filteredRows), [filteredRows]);
 
+  const statusGroupSlices = useMemo(
+    () =>
+      aggregateSlicesByField(
+        filteredRows,
+        (r) => {
+          const s = r.status.trim().toLowerCase();
+          if (s === 'offer') return 'Offer';
+          if (s === 'interview' || s === 'screening') return 'In progress';
+          if (s === 'rejected' || s === 'withdrawn') return 'Closed';
+          return 'Applied';
+        },
+        (i) => INSIGHT_CHART_PALETTE[(i + 5) % INSIGHT_CHART_PALETTE.length]!,
+      ),
+    [filteredRows],
+  );
+
   const avgByStatus = useMemo(
     () =>
       averageMetricByStatus(filteredRows, (i) => INSIGHT_CHART_PALETTE[(i + 3) % INSIGHT_CHART_PALETTE.length]!),
@@ -219,15 +235,17 @@ export default function InsightsScreen() {
 
   const periodHint =
     period === 'day'
-      ? 'Daily view: last 14 calendar days, includes a dot heatmap plus bar, line, and metric micro charts.'
+      ? 'Daily view, last 14 days.'
       : period === 'week'
-        ? 'Weekly view: last 8 Monday start weeks, includes a “latest vs earlier weeks” line in At a glance.'
-        : 'Monthly view: last 12 calendar months, same charts, tuned to month sized buckets.';
+        ? 'Weekly view, last 8 weeks (Monday start).'
+        : 'Monthly view, last 12 months.';
 
   const a11yStats = `Summary for ${sectionTitle(period)}. ${filteredRows.length} applications in this window. ${rows.length} total saved.`;
   const a11yBar = `Colour bar chart by ${bucketUnitPhrase(period)}. Total in chart ${totalInView}.`;
   const a11yLine = `Line chart of the same timeline. Peak ${maxC} applications in one bucket.`;
   const a11yPie = `Donut chart by status. ${statusSlices.map((s) => `${s.label} ${s.count}`).join(', ') || 'no slices'}.`;
+  const a11yPie2 = `Donut chart by status group. ${statusGroupSlices.map((s) => `${s.label} ${s.count}`).join(', ') || 'no slices'}.`;
+  const a11yPie3 = `Donut chart by category. ${categorySlices.map((s) => `${s.label} ${s.count}`).join(', ') || 'no slices'}.`;
   const a11yStrip = `Category mix bar. ${categorySlices.map((s) => `${s.label} ${s.count}`).join(', ') || 'none'}.`;
   const a11yAvg = `Average metric by status. ${avgByStatus.map((r) => `${r.label} average ${r.avg}`).join(', ') || 'none'}.`;
 
@@ -250,12 +268,14 @@ export default function InsightsScreen() {
       <HeroBanner
         eyebrow="CareerBoost, Insights"
         title="Insights"
-        tagline="Daily, weekly, and monthly views, bars, line, donut, and extra at a glance visuals, all from saved applications on this device."
+        tagline="Quick charts from your saved applications."
       />
 
-      <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
-        <ThemedText style={[styles.note, { color: palette.icon }]}>{periodHint}</ThemedText>
-
+      <ScrollView
+        style={styles.scrollFlex}
+        contentContainerStyle={styles.body}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled">
         {/* Section: online extras — career tip, weather, motivation (optional setup; see .env.example for weather) */}
         <CareerTipCard
           tint={palette.tint}
@@ -289,6 +309,8 @@ export default function InsightsScreen() {
           errorSurfaceColor={palette.errorSurface}
           errorBorderColor={palette.errorBorder}
         />
+
+        <ThemedText style={[styles.note, { color: palette.icon }]}>{periodHint}</ThemedText>
 
         <View style={styles.segment} accessibilityRole="tablist" accessibilityLabel="Time range">
           {(['day', 'week', 'month'] as const).map((p) => {
@@ -392,10 +414,7 @@ export default function InsightsScreen() {
             <ThemedText type="defaultSemiBold" style={styles.sectionHead}>
               Quick numbers ({sectionTitle(period)})
             </ThemedText>
-            <ThemedText style={[styles.caption, { color: palette.icon }]}>
-              Three bright tiles: how many applications fall in this view, your full library size, and the average primary
-              metric in the view.
-            </ThemedText>
+            <ThemedText style={[styles.caption, { color: palette.icon }]}>Counts and average metric for this view.</ThemedText>
             <InsightStatCards
               inPeriod={filteredRows.length}
               totalSaved={rows.length}
@@ -407,15 +426,15 @@ export default function InsightsScreen() {
             <ThemedText type="defaultSemiBold" style={styles.sectionHead}>
               Bar chart, applications per {bucketUnitPhrase(period)}
             </ThemedText>
-            <ThemedText style={[styles.caption, { color: palette.icon }]}>
-              Each bar is a time bucket; height is how many applications you logged with that applied date.
-            </ThemedText>
+            <ThemedText style={[styles.caption, { color: palette.icon }]}>Bars show how many you logged per bucket.</ThemedText>
             <SimpleBarChart
               data={chartData}
               maxCount={maxC}
               tint={palette.tint}
               track={palette.barTrack}
               textColor={palette.text}
+              yAxisTitle="Y axis, applications"
+              xAxisTitle={`X axis, ${bucketUnitPhrase(period)} buckets`}
               barColors={barColors}
               accessibilitySummary={a11yBar}
             />
@@ -423,9 +442,7 @@ export default function InsightsScreen() {
             <ThemedText type="defaultSemiBold" style={styles.sectionHead}>
               Line chart, same timeline
             </ThemedText>
-            <ThemedText style={[styles.caption, { color: palette.icon }]}>
-              Connects the same counts as the bars so you can spot spikes at a glance.
-            </ThemedText>
+            <ThemedText style={[styles.caption, { color: palette.icon }]}>Same data as the bars, just connected.</ThemedText>
             <SimpleLineChart
               buckets={buckets}
               width={chartW}
@@ -450,9 +467,7 @@ export default function InsightsScreen() {
             <ThemedText type="defaultSemiBold" style={styles.sectionHead}>
               Donut chart, status mix in this view
             </ThemedText>
-            <ThemedText style={[styles.caption, { color: palette.icon }]}>
-              Slice sizes follow how many in-window applications have each current status.
-            </ThemedText>
+            <ThemedText style={[styles.caption, { color: palette.icon }]}>Share of each status in this view.</ThemedText>
             <SimplePieChart
               slices={statusSlices}
               textColor={palette.text}
@@ -462,11 +477,33 @@ export default function InsightsScreen() {
             />
 
             <ThemedText type="defaultSemiBold" style={styles.sectionHead}>
+              Donut chart, simplified status groups
+            </ThemedText>
+            <ThemedText style={[styles.caption, { color: palette.icon }]}>Applied, in progress, closed, and offer.</ThemedText>
+            <SimplePieChart
+              slices={statusGroupSlices}
+              textColor={palette.text}
+              mutedColor={palette.icon}
+              holeColor={palette.background}
+              accessibilitySummary={a11yPie2}
+            />
+
+            <ThemedText type="defaultSemiBold" style={styles.sectionHead}>
+              Donut chart, category mix
+            </ThemedText>
+            <ThemedText style={[styles.caption, { color: palette.icon }]}>Share of each category in this view.</ThemedText>
+            <SimplePieChart
+              slices={categorySlices}
+              textColor={palette.text}
+              mutedColor={palette.icon}
+              holeColor={palette.background}
+              accessibilitySummary={a11yPie3}
+            />
+
+            <ThemedText type="defaultSemiBold" style={styles.sectionHead}>
               Category rainbow strip
             </ThemedText>
-            <ThemedText style={[styles.caption, { color: palette.icon }]}>
-              Width of each colour is the share of applications in each category (uses your saved category colours).
-            </ThemedText>
+            <ThemedText style={[styles.caption, { color: palette.icon }]}>Fast category mix, one strip.</ThemedText>
             <CategoryMixStrip
               slices={categorySlices}
               textColor={palette.text}
@@ -478,9 +515,7 @@ export default function InsightsScreen() {
             <ThemedText type="defaultSemiBold" style={styles.sectionHead}>
               Average metric by status
             </ThemedText>
-            <ThemedText style={[styles.caption, { color: palette.icon }]}>
-              Horizontal bars compare typical metric size (hours, stages, etc.) for each status in this period.
-            </ThemedText>
+            <ThemedText style={[styles.caption, { color: palette.icon }]}>Average metric, grouped by status.</ThemedText>
             <AvgMetricByStatus
               rows={avgByStatus}
               trackColor={palette.barTrack}
@@ -489,10 +524,7 @@ export default function InsightsScreen() {
               accessibilitySummary={a11yAvg}
             />
 
-            <ThemedText style={[styles.footer, { color: palette.icon }]}>
-              Total application events in the time buckets above: {totalInView}. All figures come from your saved
-              applications on this device.
-            </ThemedText>
+            <ThemedText style={[styles.footer, { color: palette.icon }]}>Total in chart: {totalInView}.</ThemedText>
           </>
         ) : null}
       </ScrollView>
@@ -502,17 +534,32 @@ export default function InsightsScreen() {
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
+  scrollFlex: { flex: 1 },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 10 },
   muted: { opacity: 0.85 },
-  body: { padding: 16, paddingBottom: 40, gap: 12 },
-  note: { fontSize: 14, fontWeight: '500' },
-  segment: { flexDirection: 'row', gap: 8 },
+  body: {
+    padding: 16,
+    paddingBottom: 40,
+    gap: 14,
+    alignItems: 'stretch',
+    flexGrow: 1,
+  },
+  note: { fontSize: 14, fontWeight: '500', flexShrink: 1 },
+  segment: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    alignItems: 'stretch',
+  },
   segBtn: {
-    flex: 1,
-    paddingVertical: 10,
+    flexGrow: 1,
+    flexBasis: 0,
+    minWidth: 96,
+    paddingVertical: 12,
     borderRadius: 10,
     borderWidth: 1,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   segText: { fontSize: 14 },
   sectionHead: { marginTop: 10, fontSize: 16 },

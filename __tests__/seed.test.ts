@@ -1,5 +1,5 @@
-// Unit tests (rubric testing item 10) — seedDb inserts sample data into all core tables:
-// categories, applications (primary job records), application_status_logs, targets.
+// Unit tests (rubric item 10): seedDb inserts sample data into core tracker tables used for Insights and lists:
+// categories, applications, application_status_logs, targets (coursework analogues: habits/trips/logs/targets).
 // Covers idempotency (no duplicate rows on second run) and referential consistency (FK-style checks in mock store).
 
 import { SEED_EXPECTED_APPLICATIONS_MIN, seedDb } from '@/db/seed';

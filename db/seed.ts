@@ -101,11 +101,11 @@ export async function seedDb(): Promise<void> {
     const insertedCategories = await tx
       .insert(categories)
       .values([
-        { name: 'Software Engineering', color: '#2563eb', icon: 'code', createdAt: nowMs },
-        { name: 'Data / Analytics', color: '#16a34a', icon: 'chart', createdAt: nowMs },
-        { name: 'Product / UX', color: '#a855f7', icon: 'palette', createdAt: nowMs },
-        { name: 'Cyber / IT Support', color: '#ea580c', icon: 'shield', createdAt: nowMs },
-        { name: 'Marketing / Content', color: '#db2777', icon: 'megaphone', createdAt: nowMs },
+        { name: 'Software Engineering', color: '#2563eb', icon: '💻', createdAt: nowMs },
+        { name: 'Data / Analytics', color: '#16a34a', icon: '📊', createdAt: nowMs },
+        { name: 'Product / UX', color: '#a855f7', icon: '🎨', createdAt: nowMs },
+        { name: 'Cyber / IT Support', color: '#ea580c', icon: '🛡️', createdAt: nowMs },
+        { name: 'Marketing / Content', color: '#db2777', icon: '📝', createdAt: nowMs },
       ])
       .returning({ id: categories.id, name: categories.name });
 
@@ -186,7 +186,7 @@ export async function seedDb(): Promise<void> {
         appliedDate: daysAgoIso(now, daysAgo),
         metricValue: 2 + (week % 5),
         categoryId: catByName[catName]!,
-        notes: 'Seed: weekly bucket filler.',
+        notes: 'Weekly record to fill out charts.',
         status: statuses[week % statuses.length]!,
         createdAt: nowMs,
       });
@@ -205,7 +205,7 @@ export async function seedDb(): Promise<void> {
         appliedDate: iso,
         metricValue: 1 + (m % 7),
         categoryId: catByName[catName]!,
-        notes: 'Seed: monthly bucket filler.',
+        notes: 'Monthly record to fill out charts.',
         status: statuses[(m + 1) % statuses.length]!,
         createdAt: nowMs,
       });
@@ -224,7 +224,7 @@ export async function seedDb(): Promise<void> {
         appliedDate: iso,
         metricValue: 8 + (di % 4),
         categoryId: catByName[catName]!,
-        notes: 'Seed: current-week accent for charts and target progress.',
+        notes: 'Current week record to show progress.',
         status: weekAccentStatuses[di % weekAccentStatuses.length]!,
         createdAt: nowMs,
       });
@@ -244,22 +244,30 @@ export async function seedDb(): Promise<void> {
     // insert – status timelines (each application: logs match latest `applications.status`)
     const logRows: (typeof applicationStatusLogs.$inferInsert)[] = [];
     for (const a of apps) {
-      const base = nowMs - 1000 * 60 * 60 * 2;
+      // Spread log timestamps across apps so history looks realistic (deterministic offsets from id).
+      const dayMs = 1000 * 60 * 60 * 24;
+      const hourMs = 1000 * 60 * 60;
+      const minuteMs = 1000 * 60;
+      const appOffsetDays = a.id % 18; // 0..17 days ago
+      const appOffsetHours = a.id % 12; // 0..11 hours
+      const appOffsetMinutes = (a.id * 7) % 60; // 0..59 minutes
+      const base = nowMs - appOffsetDays * dayMs - appOffsetHours * hourMs - appOffsetMinutes * minuteMs;
       const seq = [...statusTimelineForLatest(a.status)];
       for (let i = 0; i < seq.length; i++) {
         const st = seq[i]!;
-        let note = 'Seed: status update';
-        if (st === 'Applied') note = 'Seed: application submitted';
-        else if (st === 'Screening') note = 'Seed: recruiter / HR screen';
-        else if (st === 'Interview') note = 'Seed: interview stage';
-        else if (st === 'Offer') note = 'Seed: offer received';
-        else if (st === 'Rejected') note = 'Seed: application not successful';
-        else if (st === 'Withdrawn') note = 'Seed: candidate withdrew';
+        let note = 'Status updated';
+        if (st === 'Applied') note = 'Application submitted';
+        else if (st === 'Screening') note = 'Recruiter screen';
+        else if (st === 'Interview') note = 'Interview stage';
+        else if (st === 'Offer') note = 'Offer received';
+        else if (st === 'Rejected') note = 'Application not successful';
+        else if (st === 'Withdrawn') note = 'Candidate withdrew';
         logRows.push({
           applicationId: a.id,
           status: st,
           note,
-          createdAt: base - i * 1000 * 60 * 60 * 24,
+          // Earlier statuses should appear earlier, with a small extra jitter per step.
+          createdAt: base - i * dayMs - ((a.id + i * 11) % 90) * minuteMs,
         });
       }
     }

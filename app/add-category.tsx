@@ -1,4 +1,4 @@
-// add category – insert into `categories` (name, colour hex, icon label). Records on the tracker must pick a category.
+// add category – insert into `categories` (name, colour hex, simple emoji). Records on the tracker must pick a category.
 
 // imports
 import { useMemo, useState } from 'react';
@@ -13,8 +13,23 @@ import { useThemePalette } from '@/hooks/use-theme-palette';
 import { validateCategoryForm } from '@/lib/validate-category-form';
 import { Stack, useRouter } from 'expo-router';
 
-// constants – simple preset palette (good contrast on white cards)
-const PRESET_COLOURS = ['#2563eb', '#16a34a', '#a855f7', '#dc2626', '#ea580c', '#0891b2'] as const;
+// constants – preset palette (good contrast on light and dark cards)
+const PRESET_COLOURS = [
+  '#2563eb',
+  '#16a34a',
+  '#a855f7',
+  '#dc2626',
+  '#ea580c',
+  '#0891b2',
+  '#0f766e',
+  '#4f46e5',
+  '#9333ea',
+  '#c026d3',
+  '#db2777',
+  '#b45309',
+  '#64748b',
+  '#0ea5e9',
+] as const;
 
 // screen
 export default function AddCategoryScreen() {
@@ -23,7 +38,7 @@ export default function AddCategoryScreen() {
 
   const [name, setName] = useState('');
   const [color, setColor] = useState<string>(PRESET_COLOURS[0]);
-  const [icon, setIcon] = useState('tag');
+  const [icon, setIcon] = useState('🏷️');
   const [fieldErrors, setFieldErrors] = useState<{ name?: string; color?: string; icon?: string }>({});
 
   // true when the hex field matches one of the chips (hint text only)
@@ -58,9 +73,9 @@ export default function AddCategoryScreen() {
         <View style={[styles.storyCard, { borderColor: palette.borderSubtle, backgroundColor: palette.surfaceMuted }]}>
           <ThemedText type="defaultSemiBold">What a category is</ThemedText>
           <ThemedText style={[styles.storyLead, { color: palette.icon }]}>
-            Each category has a name, a colour for chips and list accents, and a short icon label (plain text for lists
-            and CSV). Every tracker record must reference a category, add categories here first when you need a new
-            group.
+            Each category has a name and a colour for chips and list accents. You can also pick a simple emoji so the
+            list feels friendly. Every tracker record must reference a category, add categories here first when you need
+            a new group.
           </ThemedText>
         </View>
 
@@ -123,14 +138,14 @@ export default function AddCategoryScreen() {
         </View>
 
         <FormField
-          label="Icon label"
-          hint="Required. One short word or token, not an image file, used in the category list and exports."
+          label="Emoji"
+          hint="Required. A simple emoji that represents this category (used in lists and exports)."
           value={icon}
           onChangeText={(v) => {
             setIcon(v);
             setFieldErrors((e) => ({ ...e, icon: undefined }));
           }}
-          placeholder="e.g. code, chart, tag"
+          placeholder="e.g. 💻 📊 🎨 🛡️"
           autoCapitalize="none"
           errorText={fieldErrors.icon}
         />

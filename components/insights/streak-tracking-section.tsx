@@ -133,9 +133,10 @@ const styles = StyleSheet.create({
   tileEyebrow: { fontSize: 12, fontWeight: '800', letterSpacing: 0.35, textTransform: 'uppercase' },
   tileMetrics: {
     flexDirection: 'row',
-    flexWrap: 'nowrap',
+    flexWrap: 'wrap',
     justifyContent: 'space-between',
     gap: 12,
+    alignItems: 'flex-start',
   },
   metricCol: {
     flexDirection: 'column',

@@ -4,7 +4,6 @@
 import { Tabs } from 'expo-router';
 import React from 'react';
 
-import { HapticTab } from '@/components/haptic-tab';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useThemePalette } from '@/hooks/use-theme-palette';
 
@@ -19,11 +18,17 @@ export default function TabLayout() {
         tabBarActiveTintColor: tabPalette.tint,
         tabBarInactiveTintColor: tabPalette.tabIconDefault,
         headerShown: false,
-        tabBarButton: HapticTab,
+        tabBarHideOnKeyboard: true,
         tabBarStyle: {
+          position: 'absolute',
+          left: 0,
+          right: 0,
+          bottom: 0,
           backgroundColor: tabPalette.surfaceCard,
           borderTopColor: tabPalette.borderSubtle,
           borderTopWidth: 1,
+          zIndex: 1000,
+          elevation: 1000,
         },
         tabBarLabelStyle: { fontWeight: '600', fontSize: 11 },
       }}>

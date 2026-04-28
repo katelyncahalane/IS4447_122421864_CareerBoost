@@ -15,6 +15,6 @@ module.exports = () => ({
       /** Default city for Current Weather (no GPS). Override in .env for your region. */
       openWeatherCity: process.env.EXPO_PUBLIC_OPENWEATHER_CITY ?? '',
     },
-    plugins: [...(appJson.expo.plugins ?? []), 'expo-notifications'],
+    plugins: [...(appJson.expo.plugins ?? []), 'expo-web-browser', 'expo-notifications'],
   },
 });
