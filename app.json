@@ -8,7 +8,7 @@
     "icon": "./assets/images/icon.png",
     "scheme": "careerboost",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "ios": {
       "bundleIdentifier": "com.katelyncahalane.careerboost",
       "supportsTablet": true
