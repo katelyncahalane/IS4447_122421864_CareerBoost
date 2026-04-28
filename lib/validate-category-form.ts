@@ -21,7 +21,7 @@ export function validateCategoryForm(input: {
 
   if (!name) errors.name = 'Name is required.';
   if (!icon) {
-    errors.icon = 'Emoji is required. Pick one character you like (e.g. 💻 📊 🎨 🛡️).';
+    errors.icon = 'Label is required. Use a short word for lists and exports (e.g. code, chart, tag).';
   }
   if (!isHexColour(color)) {
     errors.color = 'Colour must be hex #RRGGBB (e.g. #2563eb).';

@@ -101,11 +101,11 @@ export async function seedDb(): Promise<void> {
     const insertedCategories = await tx
       .insert(categories)
       .values([
-        { name: 'Software Engineering', color: '#2563eb', icon: '💻', createdAt: nowMs },
-        { name: 'Data / Analytics', color: '#16a34a', icon: '📊', createdAt: nowMs },
-        { name: 'Product / UX', color: '#a855f7', icon: '🎨', createdAt: nowMs },
-        { name: 'Cyber / IT Support', color: '#ea580c', icon: '🛡️', createdAt: nowMs },
-        { name: 'Marketing / Content', color: '#db2777', icon: '📝', createdAt: nowMs },
+        { name: 'Software Engineering', color: '#2563eb', icon: 'code', createdAt: nowMs },
+        { name: 'Data / Analytics', color: '#16a34a', icon: 'chart', createdAt: nowMs },
+        { name: 'Product / UX', color: '#a855f7', icon: 'palette', createdAt: nowMs },
+        { name: 'Cyber / IT Support', color: '#ea580c', icon: 'shield', createdAt: nowMs },
+        { name: 'Marketing / Content', color: '#db2777', icon: 'megaphone', createdAt: nowMs },
       ])
       .returning({ id: categories.id, name: categories.name });
 

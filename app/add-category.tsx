@@ -1,4 +1,4 @@
-// add category – insert into `categories` (name, colour hex, simple emoji). Records on the tracker must pick a category.
+// add category – insert into `categories` (name, colour hex, short label). Records on the tracker must pick a category.
 
 // imports
 import { useMemo, useState } from 'react';
@@ -38,7 +38,7 @@ export default function AddCategoryScreen() {
 
   const [name, setName] = useState('');
   const [color, setColor] = useState<string>(PRESET_COLOURS[0]);
-  const [icon, setIcon] = useState('🏷️');
+  const [icon, setIcon] = useState('tag');
   const [fieldErrors, setFieldErrors] = useState<{ name?: string; color?: string; icon?: string }>({});
 
   // true when the hex field matches one of the chips (hint text only)
@@ -73,9 +73,8 @@ export default function AddCategoryScreen() {
         <View style={[styles.storyCard, { borderColor: palette.borderSubtle, backgroundColor: palette.surfaceMuted }]}>
           <ThemedText type="defaultSemiBold">What a category is</ThemedText>
           <ThemedText style={[styles.storyLead, { color: palette.icon }]}>
-            Each category has a name and a colour for chips and list accents. You can also pick a simple emoji so the
-            list feels friendly. Every tracker record must reference a category, add categories here first when you need
-            a new group.
+            Each category has a name and a colour for chips and list accents. Add a short label so lists and exports are
+            consistent. Every tracker record must reference a category, add categories here first when you need a new group.
           </ThemedText>
         </View>
 
@@ -138,14 +137,14 @@ export default function AddCategoryScreen() {
         </View>
 
         <FormField
-          label="Emoji"
-          hint="Required. A simple emoji that represents this category (used in lists and exports)."
+          label="Label"
+          hint="Required. One short word used in lists and exports."
           value={icon}
           onChangeText={(v) => {
             setIcon(v);
             setFieldErrors((e) => ({ ...e, icon: undefined }));
           }}
-          placeholder="e.g. 💻 📊 🎨 🛡️"
+          placeholder="e.g. code, chart, tag"
           autoCapitalize="none"
           errorText={fieldErrors.icon}
         />

@@ -1,4 +1,4 @@
-// edit category – update `categories` (name, colour, emoji). Delete only when no records reference this category (FK).
+// edit category – update `categories` (name, colour, short label). Delete only when no records reference this category (FK).
 
 // imports
 import { useEffect, useMemo, useState } from 'react';
@@ -150,7 +150,7 @@ export default function EditCategoryScreen() {
         <View style={[styles.storyCard, { borderColor: palette.borderSubtle, backgroundColor: palette.surfaceMuted }]}>
           <ThemedText type="defaultSemiBold">Editing categories</ThemedText>
           <ThemedText style={[styles.storyLead, { color: palette.icon }]}>
-            Name, colour, and emoji are saved on this device and show on every record that uses this category. You cannot
+            Name, colour, and label are saved on this device and show on every record that uses this category. You cannot
             delete a category while any record still uses it, reassign records on the tracker first.
           </ThemedText>
         </View>
@@ -211,14 +211,14 @@ export default function EditCategoryScreen() {
         </View>
 
         <FormField
-          label="Emoji"
-          hint="Required. A simple emoji used in lists and exports."
+          label="Label"
+          hint="Required. One short word used in lists and exports."
           value={icon}
           onChangeText={(v) => {
             setIcon(v);
             setFieldErrors((e) => ({ ...e, icon: undefined }));
           }}
-          placeholder="e.g. 💻 📊 🎨"
+          placeholder="e.g. code, chart"
           autoCapitalize="none"
           errorText={fieldErrors.icon}
         />
