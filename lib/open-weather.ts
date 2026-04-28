@@ -30,6 +30,29 @@ export type WeatherSnapshot = {
   fetchedAtMs: number;
 };
 
+type OpenMeteoGeo = {
+  results?: { name?: string; latitude?: number; longitude?: number }[];
+};
+
+type OpenMeteoForecast = {
+  current?: { temperature_2m?: number; weather_code?: number };
+};
+
+function openMeteoWeatherLabel(code: number | undefined): string {
+  // Minimal mapping, good enough for UI.
+  if (code == null) return 'conditions';
+  if (code === 0) return 'clear';
+  if (code === 1 || code === 2) return 'partly cloudy';
+  if (code === 3) return 'overcast';
+  if (code === 45 || code === 48) return 'fog';
+  if (code >= 51 && code <= 57) return 'drizzle';
+  if (code >= 61 && code <= 67) return 'rain';
+  if (code >= 71 && code <= 77) return 'snow';
+  if (code >= 80 && code <= 82) return 'showers';
+  if (code >= 95) return 'thunderstorm';
+  return 'conditions';
+}
+
 function weatherAccessKey(): string {
   const fromExtra = readOpenWeatherKeyFromExtra();
   if (fromExtra.length > 0) return fromExtra;
@@ -90,7 +113,7 @@ export function sanitizeWeatherErrorForUi(raw: string): string {
   return t.replace(/\bapi\b/gi, 'service').replace(/\s+/g, ' ').trim() || 'Could not load weather.';
 }
 
-export async function fetchCurrentWeather(city: string = defaultCity()): Promise<WeatherSnapshot> {
+async function fetchOpenWeather(city: string): Promise<WeatherSnapshot> {
   const key = weatherAccessKey();
   if (!key) {
     throw new Error('Forecast is not available in this session.');
@@ -124,4 +147,49 @@ export async function fetchCurrentWeather(city: string = defaultCity()): Promise
     tempC,
     fetchedAtMs: Date.now(),
   };
+}
+
+async function fetchOpenMeteo(city: string): Promise<WeatherSnapshot> {
+  const q = city.trim().length > 0 ? city.trim() : FALLBACK_CITY;
+  const geoUrl = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=1&language=en&format=json`;
+  const geoRes = await fetchWithTimeout(geoUrl, { headers: { Accept: 'application/json' } }, FETCH_TIMEOUT_MS);
+  if (!geoRes.ok) throw new Error('Could not find that city.');
+  const geo = (await geoRes.json()) as OpenMeteoGeo;
+  const hit = geo.results?.[0];
+  const lat = typeof hit?.latitude === 'number' ? hit.latitude : NaN;
+  const lon = typeof hit?.longitude === 'number' ? hit.longitude : NaN;
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) throw new Error('Could not find that city.');
+
+  const wxUrl = `https://api.open-meteo.com/v1/forecast?latitude=${encodeURIComponent(String(lat))}&longitude=${encodeURIComponent(String(lon))}&current=temperature_2m,weather_code`;
+  const wxRes = await fetchWithTimeout(wxUrl, { headers: { Accept: 'application/json' } }, FETCH_TIMEOUT_MS);
+  if (!wxRes.ok) throw new Error('Forecast could not be loaded. Try again in a moment.');
+  const wx = (await wxRes.json()) as OpenMeteoForecast;
+  const tempC = typeof wx.current?.temperature_2m === 'number' ? wx.current.temperature_2m : NaN;
+  if (!Number.isFinite(tempC)) throw new Error('Forecast data was incomplete.');
+
+  return {
+    city: typeof hit?.name === 'string' && hit.name.trim() ? hit.name.trim() : q,
+    description: openMeteoWeatherLabel(wx.current?.weather_code),
+    tempC,
+    fetchedAtMs: Date.now(),
+  };
+}
+
+export async function fetchCurrentWeather(city: string = defaultCity()): Promise<WeatherSnapshot> {
+  const q = city.trim().length > 0 ? city.trim() : FALLBACK_CITY;
+  // Prefer key-based OpenWeather (matches the coursework "env key" expectation).
+  // Fall back to Open-Meteo so Weather still works on Android devices where the key was not bundled into the app runtime.
+  if (hasWeatherKey()) {
+    try {
+      return await fetchOpenWeather(q);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : '';
+      const lower = msg.toLowerCase();
+      if (lower.includes('unauthorized') || lower.includes('invalid') || lower.includes('401')) {
+        return await fetchOpenMeteo(q);
+      }
+      throw e;
+    }
+  }
+  return await fetchOpenMeteo(q);
 }

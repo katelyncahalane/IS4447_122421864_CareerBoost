@@ -6,6 +6,7 @@ const QUOTABLE_PRIMARY =
   'https://api.quotable.io/random?tags=motivational&maxLength=280';
 const QUOTABLE_FALLBACK = 'https://api.quotable.io/random?maxLength=280';
 const ZEN_QUOTES = 'https://zenquotes.io/api/random';
+const ADVICE_SLIP = 'https://api.adviceslip.com/advice';
 
 const FETCH_TIMEOUT_MS = 14_000;
 
@@ -44,12 +45,28 @@ function parseZenQuotes(data: unknown): { quote: string; author: string } | null
 }
 
 async function tryUrl(url: string): Promise<MotivationQuote | null> {
-  const res = await fetchWithTimeout(url, { headers: { Accept: 'application/json' } }, FETCH_TIMEOUT_MS);
+  const res = await fetchWithTimeout(
+    url,
+    {
+      headers: {
+        Accept: 'application/json',
+        // Some public quote APIs are picky on Android if there is no UA.
+        'User-Agent': 'CareerBoost/1.0',
+      },
+    },
+    FETCH_TIMEOUT_MS,
+  );
   if (!res.ok) return null;
   const data: unknown = await res.json();
   if (url.includes('zenquotes.io')) {
     const z = parseZenQuotes(data);
     return z ? { ...z, fetchedAtMs: Date.now() } : null;
+  }
+  if (url.includes('adviceslip.com')) {
+    const o = data as { slip?: { advice?: unknown } };
+    const quote = typeof o?.slip?.advice === 'string' ? o.slip.advice.trim() : '';
+    if (!quote) return null;
+    return { quote, author: 'Advice Slip', fetchedAtMs: Date.now() };
   }
   const single = parseQuotableBody(data);
   if (single) return { ...single, fetchedAtMs: Date.now() };
@@ -58,7 +75,7 @@ async function tryUrl(url: string): Promise<MotivationQuote | null> {
 }
 
 export async function fetchMotivationQuote(): Promise<MotivationQuote> {
-  for (const url of [QUOTABLE_PRIMARY, QUOTABLE_FALLBACK, ZEN_QUOTES]) {
+  for (const url of [QUOTABLE_PRIMARY, QUOTABLE_FALLBACK, ZEN_QUOTES, ADVICE_SLIP]) {
     try {
       const got = await tryUrl(url);
       if (got) return got;
